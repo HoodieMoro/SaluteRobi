@@ -224,6 +224,23 @@ legend{font-weight:700;padding:0;margin-bottom:8px}
 .vd-mon{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .vis-body{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1;align-items:flex-start}
 .ref-img{border-radius:10px;border:1px solid var(--line);max-height:180px;object-fit:cover}
+.atts{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;width:100%}
+.att{position:relative;min-width:0}
+.att-open{width:100%;border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);padding:0;overflow:hidden;display:flex;flex-direction:column;color:var(--ink);font-weight:700;font-size:.78rem}
+.att-open img{width:100%;max-width:100%;aspect-ratio:3/4;object-fit:cover;display:block;background:#fff}
+.att-pdf{width:100%;max-width:100%;aspect-ratio:3/4;display:grid;place-items:center;font-family:var(--font-head);font-weight:600;font-size:1.3rem;color:var(--bad);background:var(--bad-soft)}
+.att-k{padding:6px 4px;text-align:center;line-height:1.2;overflow-wrap:anywhere}
+.att-k small{display:block;font-weight:400;color:var(--muted);font-size:.7rem}
+.att-x{position:absolute;top:4px;right:4px;width:36px;height:36px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);display:grid;place-items:center}
+.att-x svg.i{width:16px;height:16px}
+#viewer{position:fixed;inset:0;z-index:58;background:var(--bg);display:flex;flex-direction:column;gap:12px;
+  padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.v-bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.v-body{flex:1;overflow:auto;min-height:0}
+.v-body img{width:100%;max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line);background:#fff}
+.v-pdf{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding-top:20px}
+.v-pdf .att-pdf{width:120px;border-radius:12px}
 
 /* Report */
 .report{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px 18px;display:flex;flex-direction:column;gap:18px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
@@ -428,8 +445,27 @@ let S;
 function emptyState(){return{v:1,demo:false,settings:{name:'',city:'',cap:'',lat:null,lon:null,bpTimes:['11:00','18:00'],big:false},meds:[],doses:{},bp:[],hr:[],weight:[],checkins:{},visits:[],wx:{}}}
 function load(){try{const j=localStorage.getItem(LS);if(j){S=JSON.parse(j);return}}catch(e){} S=emptyState()}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
-function importData(o){if(!o||!Array.isArray(o.meds))throw new Error('formato');const base=emptyState();
-  S=Object.assign(base,o,{settings:Object.assign(base.settings,o.settings||{}),demo:false});sortAll();save()}
+function importData(o){if(!o||!Array.isArray(o.meds))throw new Error('formato');const base=emptyState(),files=o.files;delete o.files;
+  S=Object.assign(base,o,{settings:Object.assign(base.settings,o.settings||{}),demo:false});sortAll();save();return files}
+
+/* Attachments (photos, PDFs) live in IndexedDB, which has far more room than localStorage.
+   Only a small preview stays with the rest of the data. */
+const FILES={_db:null,
+  db(){return this._db||(this._db=new Promise((res,rej)=>{const r=indexedDB.open('saluterobi-file',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))},
+  async tx(mode,fn){const db=await this.db();return new Promise((res,rej)=>{const t=db.transaction('files',mode),q=fn(t.objectStore('files'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})},
+  put(id,blob){return this.tx('readwrite',s=>s.put(blob,id))},
+  get(id){return this.tx('readonly',s=>s.get(id))},
+  del(id){return this.tx('readwrite',s=>s.delete(id)).catch(()=>{})},
+  clear(){return this.tx('readwrite',s=>s.clear()).catch(()=>{})}};
+const blobToDataURL=b=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(b)});
+function imgToBlob(file,max,q){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('img'))};
+  im.onload=()=>{const sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');
+    c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
+    g.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(new Error('blob')),'image/jpeg',q)};im.src=u})}
+async function restoreFiles(files){for(const [id,d] of Object.entries(files||{})){try{await FILES.put(id,await (await fetch(d)).blob())}catch(e){}}}
+function allAtts(){return S.visits.flatMap(v=>(v.attachments||[]).map(a=>Object.assign({},a,{_v:v.title})))}
+const ATT_KINDS=['Impegnativa','Referto','Ricetta','Altro'];
 load();
 /* A private setup link (#setup=...) loads the starting data on the phone; the data never sits in the public code. */
 (function(){const h=location.hash;if(!h.startsWith('#setup='))return;
@@ -684,7 +720,8 @@ function viewVisite(){const k=today(),by=(a,b)=>(a.date+a.time)<(b.date+b.time)?
   const up=S.visits.filter(v=>v.date>=k).sort(by),past=S.visits.filter(v=>v.date<k).sort(by).reverse();
   return `<div class="title-row"><h1 class="h1">Visite ed esami</h1><button class="btn btn-primary btn-sm" data-a="visEdit">${ico.plus}Aggiungi</button></div>
   <h2 class="sec">In programma</h2>${up.map(visCard).join('')||'<p class="empty">Nessun appuntamento in programma.</p>'}
-  <h2 class="sec">Già fatti</h2>${past.map(visCard).join('')||'<p class="empty">Qui trovi gli esami fatti, con la foto del referto.</p>'}`}
+  <h2 class="sec">Già fatti</h2>${past.map(visCard).join('')||'<p class="empty">Qui trovi visite ed esami già fatti, con referti e allegati.</p>'}
+  ${allAtts().length?`<h2 class="sec">Tutti i documenti</h2><section class="card">${attList(allAtts(),false)}</section>`:''}`}
 function visCard(v){const d=kd(v.date),t0=kd(today()),days=Math.round((d-t0)/864e5);
   return `<article class="card vis ${days<0?'past':''}"><div class="vis-date">${v.tbd?`<span class="vd-mon">${fMon.format(d).replace('.','')}</span><span class="vd-mon">${d.getFullYear()}</span>`:`<span class="vd-day">${d.getDate()}</span><span class="vd-mon">${fMon.format(d).replace('.','')}</span>`}</div>
   <div class="vis-body"><span class="pill ${v.type==='Visita'?'info':'neutral'}">${esc(v.type)}</span><h3 class="h3">${esc(v.title)}</h3>
@@ -692,7 +729,8 @@ function visCard(v){const d=kd(v.date),t0=kd(today()),days=Math.round((d-t0)/864
     ${v.notes?`<p class="small">${esc(v.notes)}</p>`:''}
     ${v.tbd?`<p class="small strong">Quando fissi il giorno, aggiungilo con Modifica: ti avviso il giorno prima.</p>`:days>=0?`<p class="small strong">${days===0?'Oggi':days===1?'Domani':'Tra '+days+' giorni'}${v.remind?' · avviso il giorno prima':''}</p>`:''}
     ${v.result?`<p class="small"><strong>Esito:</strong> ${esc(v.result)}</p>`:''}
-    ${v.photo?`<img class="ref-img" src="${v.photo}" alt="Foto del referto di ${esc(v.title)}">`:''}
+    ${days>=0&&(v.attachments||[]).some(a=>a.kind==='Impegnativa')?`<p class="small strong">📎 Porta con te l'impegnativa: la trovi qui sotto.</p>`:''}
+    ${attList(v.attachments,false)}
     <div class="btn-row">${v.type==='Visita'&&days>=0?`<button class="btn btn-ghost btn-sm" data-a="go" data-r="report">${ico.doc}Prepara il report</button>`:''}<button class="btn btn-ghost btn-sm" data-a="visEdit" data-id="${v.id}">${ico.edit}Modifica</button></div></div></article>`}
 
 function viewReport(){const keys=rangeKeys(repDays),s=summary(keys),from=kd(keys[0]),to=kd(keys[keys.length-1]),ins=insights();
@@ -724,7 +762,10 @@ function viewReport(){const keys=rangeKeys(repDays),s=summary(keys),from=kd(keys
 
 /* ---------- sheets ---------- */
 function openSheet(html){const w=$('#sheetWrap'),s=$('.sheet'),st=w.hidden?0:s.scrollTop;s.innerHTML=html;w.hidden=false;document.body.classList.add('noscroll');s.scrollTop=st}
-function closeSheet(){$('#sheetWrap').hidden=true;sheetR=null;document.body.classList.remove('noscroll')}
+function closeSheet(){
+  /* Files added to a visit that was then not saved are removed again. */
+  if(sheetR===renderVis&&visD&&visD._new){visD._new.forEach(id=>FILES.del(id));visD._new=null}
+  $('#sheetWrap').hidden=true;sheetR=null;document.body.classList.remove('noscroll')}
 
 function openCheckin(){const k=today();ci=S.checkins[k]?JSON.parse(JSON.stringify(S.checkins[k])):{mood:null,energy:null,sleepH:7,sleepVote:null,meals:[],water:4,active:null,activity:[],actMin:30,symptoms:[],note:''};ciStep=0;sheetR=renderCi;renderCi()}
 function renderCi(){const N=7;let b='';
@@ -764,7 +805,32 @@ function renderMed(){openSheet(`<div class="ci-top"><h2 class="sheet-title">${me
   <div class="btn-row"><button class="btn btn-primary" data-a="medSave">${ico.check}Salva</button><button class="btn btn-ghost" data-a="closeSheet">Annulla</button></div>
   ${medD.id?`<button class="btn btn-danger-ghost btn-block" data-a="medDel">${delArm?'Tocca di nuovo per eliminarla':'Elimina questa medicina'}</button>`:''}`)}
 
-function openVis(id){const v=S.visits.find(x=>x.id===id);visD=v?JSON.parse(JSON.stringify(v)):{id:null,type:'Visita',title:'',date:dkey(addDays(new Date(),7)),time:'09:00',place:'',doctor:'',notes:'',result:'',remind:true,photo:null};delArm=false;sheetR=renderVis;renderVis()}
+function openVis(id){const v=S.visits.find(x=>x.id===id);visD=v?JSON.parse(JSON.stringify(v)):{id:null,type:'Visita',title:'',date:dkey(addDays(new Date(),7)),time:'09:00',place:'',doctor:'',notes:'',result:'',remind:true,attachments:[]};delArm=false;sheetR=renderVis;renderVis()}
+function attList(list,edit){list=list||[];if(!list.length)return '';
+  return `<div class="atts">${list.map(a=>`<div class="att"><button type="button" class="att-open" data-a="attOpen" data-id="${a.id}" aria-label="Apri ${esc(a.kind)}">${a.thumb?`<img src="${a.thumb}" alt="">`:`<span class="att-pdf">PDF</span>`}<span class="att-k">${esc(a.kind)}${a._v?`<small>${esc(a._v)}</small>`:''}</span></button>${edit?`<button type="button" class="att-x" data-a="attDel" data-id="${a.id}" aria-label="Togli ${esc(a.kind)}">${ico.x}</button>`:''}</div>`).join('')}</div>`}
+async function addAttachments(list){let n=0;try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+  for(const f of list){try{let blob,thumb=null,mime=f.type||'';
+      if(mime.startsWith('image/')){blob=await imgToBlob(f,1800,0.82);thumb=await blobToDataURL(await imgToBlob(f,240,0.7));mime='image/jpeg'}
+      else if(mime==='application/pdf'||/\.pdf$/i.test(f.name)){if(f.size>20e6){toast('Questo PDF è troppo grande (massimo 20 MB).');continue}blob=f;mime='application/pdf'}
+      else{toast('Si possono allegare solo foto o PDF.');continue}
+      const id='f'+uid()+uid();await FILES.put(id,blob);
+      visD.attachments=visD.attachments||[];visD.attachments.push({id,kind:visD._kind||'Impegnativa',name:f.name||'',mime,size:blob.size,thumb,added:new Date().toISOString()});
+      (visD._new=visD._new||[]).push(id);n++}
+    catch(e){toast('Non riesco ad aprire questo file. Prova con un altro.')}}
+  if(n){renderVis();toast(n===1?'Allegato aggiunto. Ricordati di premere Salva.':`${n} allegati aggiunti. Ricordati di premere Salva.`)}}
+let vURL=null;
+function attFileName(a,blob){const pdf=((a&&a.mime)||blob.type)==='application/pdf';return `${((a&&a.kind)||'allegato').toLowerCase()}-${((a&&a.added)||new Date().toISOString()).slice(0,10)}.${pdf?'pdf':'jpg'}`}
+async function openAtt(id){const meta=allAtts().find(a=>a.id===id)||((visD&&visD.attachments)||[]).find(a=>a.id===id);let blob=null;
+  try{blob=await FILES.get(id)}catch(e){}
+  if(!blob){toast('Non trovo questo file su questo telefono.');return}
+  if(vURL)URL.revokeObjectURL(vURL);vURL=URL.createObjectURL(blob);
+  let el=$('#viewer');if(!el){el=document.createElement('div');el.id='viewer';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
+  const pdf=((meta&&meta.mime)||blob.type)==='application/pdf';
+  el.innerHTML=`<div class="v-bar"><div><strong>${esc(meta?meta.kind:'Allegato')}</strong>${meta&&meta._v?`<span class="muted small"> · ${esc(meta._v)}</span>`:''}</div><button class="icon-btn" data-a="viewerClose" aria-label="Chiudi">${ico.x}</button></div>
+    <div class="v-body">${pdf?`<div class="v-pdf"><span class="att-pdf">PDF</span><p class="strong">${esc((meta&&meta.name)||'Documento PDF')}</p><p class="muted small">Premi Apri per leggerlo o Condividi per mandarlo.</p></div>`:`<img src="${vURL}" alt="${esc(meta?meta.kind:'Allegato')}">`}</div>
+    <div class="v-act btn-row"><button class="btn btn-primary" data-a="attShare" data-id="${id}">Condividi</button>${pdf?`<a class="btn btn-ghost" href="${vURL}" download="${esc(attFileName(meta,blob))}" target="_blank" rel="noopener">Apri</a>`:''}</div>`;
+  el.hidden=false}
+function closeViewer(){const el=$('#viewer');if(el)el.hidden=true;if(vURL){URL.revokeObjectURL(vURL);vURL=null}}
 function renderVis(){const f=(k,l,ph,type)=>`<label class="field"><span>${l}</span><input id="v-${k}" data-vf="${k}" ${type?`type="${type}"`:''} value="${esc(visD[k])}" placeholder="${ph||''}"></label>`;
   openSheet(`<div class="ci-top"><h2 class="sheet-title">${visD.id?'Modifica':'Nuovo appuntamento'}</h2><button class="icon-btn" data-a="closeSheet" aria-label="Chiudi">${ico.x}</button></div>
   <fieldset><legend>Che cosa è</legend>${chips('vis','type',['Visita','Esame'])}</fieldset>
@@ -775,8 +841,12 @@ function renderVis(){const f=(k,l,ph,type)=>`<label class="field"><span>${l}</sp
   <label class="field"><span>Note</span><textarea id="v-notes" data-vf="notes" placeholder="Es. a digiuno, portare le analisi">${esc(visD.notes)}</textarea></label>
   <label class="check"><input type="checkbox" id="v-remind" ${visD.remind?'checked':''}>Avvisami il giorno prima</label>
   ${f('result','Esito (dopo la visita)','Es. Nella norma')}
-  <div class="field"><span>Foto del referto</span>${visD.photo?`<img class="ref-img" src="${visD.photo}" alt="Foto del referto"><button class="btn btn-ghost btn-sm" data-a="visPhotoDel">Togli la foto</button>`:''}
-    <label class="btn btn-ghost btn-block">${ico.camera}${visD.photo?'Cambia foto':'Fotografa il referto'}<input type="file" accept="image/*" capture="environment" id="v-photo" hidden></label></div>
+  <div class="field"><span>Allegati</span>
+    <p class="muted small" style="font-weight:400">Impegnative, referti, ricette: foto o PDF. Prima scegli il tipo, poi aggiungi il file.</p>
+    ${attList(visD.attachments,true)}
+    <div class="chips">${ATT_KINDS.map(k=>{const on=(visD._kind||'Impegnativa')===k;return `<button type="button" class="chip" data-a="attKind" data-v="${k}" aria-pressed="${on}">${on?ico.check:''}${k}</button>`}).join('')}</div>
+    <div class="btn-row"><label class="btn btn-ghost">${ico.camera}Fotografa<input type="file" accept="image/*" capture="environment" id="att-cam" hidden></label>
+      <label class="btn btn-ghost">${ico.doc}Scegli file<input type="file" accept="image/*,application/pdf" multiple id="att-file" hidden></label></div></div>
   <p class="err" id="v-err" hidden></p>
   <div class="btn-row"><button class="btn btn-primary" data-a="visSave">${ico.check}Salva</button><button class="btn btn-ghost" data-a="closeSheet">Annulla</button></div>
   ${visD.id?`<button class="btn btn-danger-ghost btn-block" data-a="visDel">${delArm?'Tocca di nuovo per eliminarlo':'Elimina appuntamento'}</button>`:''}`)}
@@ -847,20 +917,35 @@ const A={
     save();closeSheet();render();toast('Medicina salvata')},
   medDel(){if(!delArm){delArm=true;renderMed();return}S.meds=S.meds.filter(x=>x.id!==medD.id);save();closeSheet();render();toast('Medicina eliminata')},
   visEdit(el){openVis(el.dataset.id)},
-  visPhotoDel(){visD.photo=null;renderVis()},
+  attKind(el){visD._kind=el.dataset.v;renderVis()},
+  attDel(el){const id=el.dataset.id;visD.attachments=(visD.attachments||[]).filter(a=>a.id!==id);
+    if(visD._new&&visD._new.includes(id)){visD._new=visD._new.filter(x=>x!==id);FILES.del(id)}else(visD._removed=visD._removed||[]).push(id);renderVis()},
+  attOpen(el){openAtt(el.dataset.id)},
+  viewerClose(){closeViewer()},
+  async attShare(el){const id=el.dataset.id,meta=allAtts().find(a=>a.id===id)||((visD&&visD.attachments)||[]).find(a=>a.id===id);let blob=null;try{blob=await FILES.get(id)}catch(e){}
+    if(!blob){toast('Non trovo questo file.');return}
+    const name=attFileName(meta,blob),f=new File([blob],name,{type:blob.type||(meta&&meta.mime)||''});
+    try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:meta?meta.kind:'Allegato'});return}}catch(e){if(e&&e.name==='AbortError')return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();toast('File salvato nei download')},
   visSave(){const e=$('#v-err');if(!visD.title.trim()||!visD.date){e.textContent='Scrivi il titolo e il giorno.';e.hidden=false;return}
-    if(visD.id){const i=S.visits.findIndex(x=>x.id===visD.id);S.visits[i]=visD}else{visD.id=uid();S.visits.push(visD)}
+    (visD._removed||[]).forEach(id=>FILES.del(id));const v=Object.assign({},visD);delete v._new;delete v._removed;delete v._kind;visD._new=null;
+    if(v.id){const i=S.visits.findIndex(x=>x.id===v.id);S.visits[i]=v}else{v.id=uid();S.visits.push(v)}
     save();closeSheet();render();toast('Appuntamento salvato')},
-  visDel(){if(!delArm){delArm=true;renderVis();return}S.visits=S.visits.filter(x=>x.id!==visD.id);save();closeSheet();render();toast('Appuntamento eliminato')},
+  visDel(){if(!delArm){delArm=true;renderVis();return}
+    const old=S.visits.find(x=>x.id===visD.id);[...((old&&old.attachments)||[]),...(visD.attachments||[])].forEach(a=>FILES.del(a.id));visD._new=null;
+    S.visits=S.visits.filter(x=>x.id!==visD.id);save();closeSheet();render();toast('Appuntamento eliminato')},
   pdf(){try{window.print()}catch(e){toast('Questo telefono non riesce a creare il PDF da qui.')}},
-  async exportData(){const name=`saluterobi-${today()}.json`,txt=JSON.stringify(S);
+  async exportData(){const name=`saluterobi-${today()}.json`,files={},atts=allAtts();
+    if(atts.length)toast('Preparo la copia con gli allegati…');
+    for(const a of atts){try{const b=await FILES.get(a.id);if(b)files[a.id]=await blobToDataURL(b)}catch(e){}}
+    const txt=JSON.stringify(Object.assign({},S,{files}));
     try{const f=new File([txt],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Copia dati SaluteRobi'});return}}
     catch(e){if(e&&e.name==='AbortError')return}
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Copia salvata nei download')},
   bigText(){S.settings.big=!S.settings.big;save();applySettings();toast(S.settings.big?'Caratteri più grandi':'Caratteri normali')},
   settings(){delArm=false;sheetR=renderSettings;renderSettings()},
   resetDemo(){S=makeDemo();save();bpD=newBp();hrD=newHr();lastRes=null;applySettings();closeSheet();render();toast('Dati di esempio ricaricati')},
-  wipe(){if(!delArm){delArm=true;renderSettings();return}S=Object.assign(emptyState(),{settings:S.demo?emptyState().settings:S.settings});
+  wipe(){if(!delArm){delArm=true;renderSettings();return}FILES.clear();S=Object.assign(emptyState(),{settings:S.demo?emptyState().settings:S.settings});
     save();bpD=newBp();hrD=newHr();lastRes=null;closeSheet();render();toast('Tutti i dati sono stati cancellati')}
 };
 function focusResult(){const r=document.getElementById('result');if(r){r.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});r.focus({preventScroll:true})}}
@@ -879,13 +964,13 @@ document.addEventListener('change',async e=>{const t=e.target;
   if(t.id==='v-tbd'){visD.tbd=t.checked}
   if(t.id==='s-big'){S.settings.big=t.checked;save();applySettings()}
   if(t.id==='s-city'){geocode(t.value)}
-  if(t.id==='imp-file'&&t.files[0]){try{importData(JSON.parse(await t.files[0].text()));closeSheet();bpD=newBp();hrD=newHr();applySettings();render();toast('Dati caricati 👍');fetchWeather()}
+  if(t.id==='imp-file'&&t.files[0]){try{const files=importData(JSON.parse(await t.files[0].text()));await FILES.clear();await restoreFiles(files);closeSheet();bpD=newBp();hrD=newHr();applySettings();render();toast('Dati caricati 👍');fetchWeather()}
     catch(err){toast('Questo file non è una copia di SaluteRobi.')}}
   if(t.id==='ocr'&&t.files[0]){let img=null;try{img=await readImg(t.files[0],400)}catch(err){}
     ocr={state:'reading',img};render();
     setTimeout(()=>{const r=Math.random;bpD.sys=Math.round(124+r()*16);bpD.dia=Math.round(76+r()*10);bpD.pulse=Math.round(64+r()*12);ocr.state='done';if(route==='misure')render()},1400)}
-  if(t.id==='v-photo'&&t.files[0]){try{visD.photo=await readImg(t.files[0],900);renderVis()}catch(err){toast('Non riesco ad aprire questa foto. Prova con un\'altra.')}}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheetWrap').hidden)closeSheet()});
+  if((t.id==='att-cam'||t.id==='att-file')&&t.files.length){const list=[...t.files];t.value='';await addAttachments(list)}});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const v=$('#viewer');if(v&&!v.hidden){closeViewer();return}if(!$('#sheetWrap').hidden)closeSheet()});
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(ROUTES.includes(h)&&h!==route){route=h;lastRes=null;render();window.scrollTo(0,0)}});
 
 function applySettings(){document.documentElement.style.setProperty('--fs',S.settings.big?'21px':'18px');$('#bigBtn').setAttribute('aria-pressed',!!S.settings.big)}
