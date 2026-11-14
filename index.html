@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B5A52">
+<meta name="robots" content="noindex">
+<meta name="description" content="Diario della salute: medicine, pressione, battiti, peso, sonno e visite.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SaluteRobi">
+<style>html{padding-top:env(safe-area-inset-top,0px)}</style>
+</head>
+<body>
+<title>SaluteRobi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@500;600;700&display=swap">
+<style>
+/* Layout: one phone-width column (max 480px), sticky header, fixed Android-style bottom bar.
+   Large, high-legibility type for an older person; colour only carries meaning (good / attention / high). */
+:root{
+  --bg:#ECF2F0; --surface:#FFFFFF; --surface-2:#F5F8F7; --ink:#13201E; --muted:#52615C; --line:#CFDAD6;
+  --primary:#0B5A52; --on-primary:#FFFFFF; --primary-soft:#D5EBE6;
+  --ok:#1C6E35; --ok-soft:#DBF0E1; --warn:#835400; --warn-soft:#FBEDCF; --bad:#B0261B; --bad-soft:#FADFDB;
+  --info:#1F4F96; --info-soft:#DCE7F7;
+  --sys:#C2362B; --dia:#2E61B0; --hr:#7B3FA3; --grid:#E1E8E5; --scrim:rgba(10,20,18,.45);
+  --font-ui:"Atkinson Hyperlegible","Segoe UI",Roboto,system-ui,sans-serif;
+  --font-head:"Lexend","Atkinson Hyperlegible",system-ui,sans-serif;
+  --fs:18px; --r:16px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1514; --surface:#172120; --surface-2:#1C2826; --ink:#E7EFEC; --muted:#9FB0AA; --line:#2C3A37;
+  --primary:#62C7B8; --on-primary:#06231F; --primary-soft:#173430;
+  --ok:#77D293; --ok-soft:#173222; --warn:#F2B451; --warn-soft:#382A10; --bad:#FF8C80; --bad-soft:#3D1A17;
+  --info:#8DB4F2; --info-soft:#18263D;
+  --sys:#FF7F73; --dia:#7FA9F0; --hr:#C597E6; --grid:#243230; --scrim:rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1514; --surface:#172120; --surface-2:#1C2826; --ink:#E7EFEC; --muted:#9FB0AA; --line:#2C3A37;
+  --primary:#62C7B8; --on-primary:#06231F; --primary-soft:#173430;
+  --ok:#77D293; --ok-soft:#173222; --warn:#F2B451; --warn-soft:#382A10; --bad:#FF8C80; --bad-soft:#3D1A17;
+  --info:#8DB4F2; --info-soft:#18263D;
+  --sys:#FF7F73; --dia:#7FA9F0; --hr:#C597E6; --grid:#243230; --scrim:rgba(0,0,0,.6); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{font-size:var(--fs);-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:1rem;line-height:1.45;margin:0}
+body.noscroll{overflow:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+svg.i{width:1.25em;height:1.25em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.app{max-width:480px;margin:0 auto}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);display:flex;align-items:center;gap:8px;
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{font-family:var(--font-head);font-weight:600;font-size:1rem;display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0;white-space:nowrap}
+@media (max-width:400px){.brand .name{display:none}}
+.brand .mark{width:32px;height:32px;border-radius:10px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center}
+.demo-chip{font-size:.7rem;font-weight:700;letter-spacing:.02em;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.icon-btn{min-width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:700;display:inline-grid;place-items:center;padding:0 8px}
+.icon-btn:disabled{opacity:.4;cursor:default}
+
+main{display:flex;flex-direction:column;gap:16px;padding-block:6px calc(110px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main > *{min-width:0}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs-in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);
+  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 10px;background:none;border:0;color:var(--muted);font-size:.72rem;font-weight:700}
+.tab .ti{width:58px;height:32px;border-radius:16px;display:grid;place-items:center}
+.tab[aria-current="page"]{color:var(--ink)}
+.tab[aria-current="page"] .ti{background:var(--primary-soft);color:var(--primary)}
+
+h1,h2,h3{margin:0;text-wrap:balance}
+.h1{font-family:var(--font-head);font-weight:600;font-size:1.65rem;line-height:1.15;letter-spacing:-.01em}
+.h2{font-family:var(--font-head);font-weight:600;font-size:1.2rem;line-height:1.25}
+.h3{font-family:var(--font-head);font-weight:600;font-size:1.02rem}
+.sec{font-family:var(--font-head);font-weight:600;font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:8px 0 -4px}
+.eyebrow{margin:0;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:.86rem} .strong{font-weight:700} .center{text-align:center}
+.title-row{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.row{display:flex;gap:12px;align-items:flex-start}
+.row-between{display:flex;gap:12px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+
+.btn{min-height:54px;border-radius:14px;border:1.5px solid transparent;padding:0 18px;font-weight:700;font-size:1rem;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.15}
+.btn-primary{background:var(--primary);color:var(--on-primary)}
+.btn-ghost{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.btn-danger-ghost{background:transparent;border-color:var(--bad-soft);color:var(--bad)}
+.btn-sm{min-height:46px;font-size:.92rem;padding:0 14px}
+.btn-block{width:100%}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-row > .btn{flex:1 1 140px}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:.8rem;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.crit{background:var(--bad);color:var(--surface)}
+.pill.info{background:var(--info-soft);color:var(--info)} .pill.neutral{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+
+/* Oggi */
+.hello{display:flex;flex-direction:column;gap:6px;padding-top:4px}
+.wx{display:flex;align-items:center;gap:8px;color:var(--muted);font-weight:700}
+.next{border-width:2px}
+.next.late{border-color:var(--warn)} .next.now{border-color:var(--primary)}
+.next-head{display:flex;align-items:center;justify-content:space-between}
+.next-time{font-family:var(--font-head);font-size:2rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.doses{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.dose{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.dose:first-child{border-top:0}
+.pilldot{width:14px;height:14px;border-radius:50%;background:var(--primary-soft);border:3px solid var(--primary);flex:none}
+.dose-txt{display:flex;flex-direction:column;min-width:0;flex:1}
+.mini{min-height:44px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-size:.86rem;padding:0 12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.mini.ok{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.mini.bad{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
+.done-card{flex-direction:row;align-items:center;gap:14px}
+.done-card > svg{width:40px;height:40px;color:var(--ok);background:var(--ok-soft);border-radius:50%;padding:8px}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.q{min-height:96px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:.95rem;padding:10px 4px}
+.q svg.i{width:30px;height:30px;color:var(--primary)}
+.tl{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.tl:first-child{border-top:0}
+.tl-time{font-weight:700;font-variant-numeric:tabular-nums}
+.tl-names{min-width:0;color:var(--muted)}
+.list{list-style:none;margin:0;padding:0}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile-val{font-family:var(--font-head);font-weight:600;font-size:1.6rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile-val small{font-size:.8rem;font-family:var(--font-ui);color:var(--muted);font-weight:700}
+.disclaimer{font-size:.8rem;color:var(--muted);text-align:center;padding:4px 8px}
+
+/* Medicine */
+.bar{height:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.bar > span{display:block;height:100%;background:var(--ok)}
+.big-num{font-family:var(--font-head);font-weight:600;font-size:1.8rem;font-variant-numeric:tabular-nums}
+.med-head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start}
+.times{display:flex;gap:8px;flex-wrap:wrap}
+.time-chip{display:inline-flex;align-items:center;gap:6px;background:var(--primary-soft);color:var(--primary);font-weight:700;border-radius:10px;padding:6px 10px;font-variant-numeric:tabular-nums}
+.stock{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:.92rem}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.dd{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.72rem;color:var(--muted);font-weight:700}
+.dd i{width:100%;max-width:34px;height:12px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line)}
+.dd.ok i{background:var(--ok);border-color:var(--ok)} .dd.bad i{background:var(--bad);border-color:var(--bad)}
+.dd.today i{background:var(--primary-soft);border:2px dashed var(--primary)}
+
+/* Misure */
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px}
+.seg button{min-height:48px;border:0;border-radius:10px;background:transparent;font-weight:700;color:var(--muted)}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.steppers{display:flex;flex-direction:column;gap:10px}
+.stepper{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}
+.st-label{font-weight:700;display:flex;flex-direction:column;line-height:1.2}
+.st-label small{color:var(--muted);font-weight:400;font-size:.8rem}
+.st-row{display:flex;align-items:center;gap:6px}
+.st-btn{width:52px;height:52px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface-2);font-size:1.6rem;font-weight:700;line-height:1;display:grid;place-items:center}
+.st-in{width:4.2ch;height:52px;text-align:center;font-family:var(--font-head);font-size:1.55rem;font-weight:600;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums;-moz-appearance:textfield;padding:0}
+.st-in::-webkit-outer-spin-button,.st-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.filled .st-in{border-color:var(--primary);background:var(--primary-soft)}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+legend{font-weight:700;padding:0;margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:46px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);padding:0 16px;font-weight:700;font-size:.92rem;display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+.check{display:flex;align-items:center;gap:12px;font-weight:700;min-height:46px}
+.check input{width:24px;height:24px;accent-color:var(--primary);flex:none}
+.sub{border:1.5px dashed var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.photo-btn{position:relative}
+.ocr{display:flex;gap:12px;align-items:center;background:var(--info-soft);color:var(--ink);border-radius:12px;padding:10px}
+.ocr img{width:64px;height:64px;object-fit:cover;border-radius:8px;flex:none}
+.result{border-width:2px}
+.result.ok{border-color:var(--ok)} .result.warn{border-color:var(--warn)} .result.bad,.result.crit{border-color:var(--bad)}
+.result.crit{background:var(--bad-soft)}
+.res-val{font-family:var(--font-head);font-weight:600;font-size:2.6rem;line-height:1;font-variant-numeric:tabular-nums}
+.res-val small{font-size:1rem;color:var(--muted);font-family:var(--font-ui);font-weight:700}
+.reading{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.reading:first-child{border-top:0}
+.reading-val{font-family:var(--font-head);font-weight:600;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.reading-meta{display:flex;flex-direction:column;min-width:0}
+
+.chart{width:100%;height:auto;display:block}
+.chart .grid{stroke:var(--grid);stroke-width:1}
+.chart .ax{fill:var(--muted);font-size:10px;font-family:var(--font-ui)}
+.chart .line{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.chart .ref{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:5 4}
+.chart .lab{font-size:11px;font-weight:700;font-family:var(--font-ui)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.82rem;color:var(--muted);font-weight:700}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:4px;border-radius:2px;display:inline-block}
+.legend i.dash{background:repeating-linear-gradient(90deg,var(--warn) 0 5px,transparent 5px 9px)}
+.empty{color:var(--muted);text-align:center;padding:18px 8px}
+
+/* Storico */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--surface-2);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi-l{font-size:.8rem;font-weight:700;color:var(--muted)}
+.kpi-v{font-family:var(--font-head);font-weight:600;font-size:1.45rem;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi-d{font-size:.8rem;color:var(--muted)}
+.ins{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:8px}
+.days{display:flex;flex-direction:column;gap:8px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.day-head{width:100%;display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;background:none;border:0;padding:12px 14px;text-align:left;min-height:60px}
+.day-date{display:flex;flex-direction:column;min-width:0}
+.day-vals{display:flex;align-items:center;gap:8px}
+.emo{font-size:1.3rem;line-height:1}
+.chev{font-size:1.4rem;color:var(--muted);transition:transform .2s}
+.day.open .chev{transform:rotate(90deg)}
+.day-body{padding:4px 14px 14px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line)}
+.dl{display:flex;flex-direction:column;gap:4px}
+.dl h4{margin:8px 0 0;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+
+/* Visite */
+.vis{flex-direction:row;align-items:flex-start;gap:14px}
+.vis-date{flex:none;width:58px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:flex;flex-direction:column;align-items:center;padding:8px 0}
+.vis.past .vis-date{background:var(--surface-2);color:var(--muted)}
+.vd-day{font-family:var(--font-head);font-size:1.5rem;font-weight:600;line-height:1}
+.vd-mon{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.vis-body{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1;align-items:flex-start}
+.ref-img{border-radius:10px;border:1px solid var(--line);max-height:180px;object-fit:cover}
+
+/* Report */
+.report{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px 18px;display:flex;flex-direction:column;gap:18px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.rep-head{border-bottom:2px solid var(--ink);padding-bottom:12px;display:flex;flex-direction:column;gap:4px}
+.report section{display:flex;flex-direction:column;gap:8px}
+.rep-h{font-family:var(--font-head);font-size:.95rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--primary)}
+.tbl-wrap{overflow-x:auto}
+.rep-t{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
+.rep-t th,.rep-t td{text-align:left;padding:7px 8px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.rep-t th{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.rep-t td.num{text-align:right;white-space:nowrap}
+.rep-foot{font-size:.78rem;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+
+/* Sheet, notification, toast */
+#sheetWrap{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.scrim{position:absolute;inset:0;background:var(--scrim)}
+.sheet{position:relative;width:100%;max-width:480px;max-height:92%;overflow-y:auto;background:var(--surface);border-radius:22px 22px 0 0;
+  padding-top:18px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:16px;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+.sheet-title{font-family:var(--font-head);font-weight:600;font-size:1.35rem}
+.field{display:flex;flex-direction:column;gap:6px;font-weight:700}
+.field input,.field textarea,.field select{min-height:52px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);padding:10px 12px;font-weight:400;width:100%}
+.field textarea{min-height:110px;resize:vertical}
+.times-edit{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.te{display:flex;gap:8px;align-items:center}
+.te input{min-height:52px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);padding:8px 12px;font-size:1.1rem}
+.err{color:var(--bad);font-weight:700}
+.ci-top{display:flex;justify-content:space-between;align-items:center}
+.prog{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:-6px}
+.prog span{display:block;height:100%;background:var(--primary);transition:width .25s}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{min-height:62px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);display:flex;align-items:center;gap:14px;padding:0 16px;font-weight:700;font-size:1.05rem;text-align:left}
+.opt[aria-pressed="true"]{border-color:var(--primary);background:var(--primary-soft)}
+.opt .emo-xl{font-size:1.9rem;line-height:1}
+.vote{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.vote-btn{min-height:64px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);font-family:var(--font-head);font-size:1.6rem;font-weight:600}
+.vote-btn[aria-pressed="true"]{border-color:var(--primary);background:var(--primary);color:var(--on-primary)}
+.vote-ends{display:flex;justify-content:space-between;font-size:.82rem;font-weight:700;color:var(--muted);margin-top:-8px}
+.vote-pick{font-weight:700;color:var(--primary);text-align:center}
+.yn{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.alert{background:var(--bad-soft);color:var(--bad);border-radius:12px;padding:12px 14px;font-weight:700;display:flex;gap:10px;align-items:flex-start}
+.ci-nav{position:sticky;bottom:calc(-20px - env(safe-area-inset-bottom,0px));background:var(--surface);padding-block:10px;margin-bottom:-10px}
+.seg-row{display:flex;gap:8px}
+
+#notif{position:fixed;left:0;right:0;top:0;z-index:50;padding-top:calc(10px + env(safe-area-inset-top,0px));
+  padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));pointer-events:none}
+.n-card{pointer-events:auto;max-width:460px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px 16px 8px;box-shadow:0 10px 30px rgba(0,0,0,.22);animation:drop .3s ease-out}
+.n-card.static{box-shadow:none;animation:none;background:var(--surface-2)}
+@keyframes drop{from{transform:translateY(-24px);opacity:0}to{transform:none;opacity:1}}
+.n-head{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700}
+.n-ic{width:22px;height:22px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:grid;place-items:center}
+.n-ic svg.i{width:13px;height:13px}
+.n-title{font-weight:700;margin-top:6px}
+.n-body{color:var(--muted);font-size:.92rem}
+.n-act{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.n-act button{border:0;background:none;color:var(--primary);font-weight:700;font-size:.9rem;padding:10px 10px;min-height:44px;border-radius:10px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);font-weight:700;border-radius:14px;padding:12px 18px;max-width:min(440px,calc(100% - 32px));text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+@media print{
+  :root{--bg:#fff!important;--surface:#fff!important;--surface-2:#f3f3f3!important;--ink:#000!important;--muted:#444!important;--line:#ccc!important;--grid:#e3e3e3!important;color-scheme:light}
+  .top,.tabs,#notif,#toast,#sheetWrap,.seg,.title-row,[data-a="pdf"],.pdf-note,body::before{display:none!important}
+  main{padding:0!important}.report{box-shadow:none;border:0;padding:0}
+}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="mark" id="brandMark"></span><span class="name">SaluteRobi</span><span class="demo-chip" id="demoChip" hidden>Dati di esempio</span></div>
+    <button class="icon-btn" data-a="bigText" id="bigBtn" aria-label="Caratteri più grandi">A+</button>
+    <button class="icon-btn" data-a="settings" id="setBtn" aria-label="Impostazioni"></button>
+  </header>
+  <main id="view"></main>
+</div>
+<nav class="tabs" aria-label="Sezioni"><div class="tabs-in" id="tabs"></div></nav>
+<div id="notif" hidden></div>
+<div id="sheetWrap" hidden><div class="scrim" data-a="closeSheet"></div><section class="sheet" role="dialog" aria-modal="true"></section></div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+const LS='saluterobi-dati';
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const dkey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const kd=k=>{const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const hm=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const toMin=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
+const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()};
+const today=()=>dkey(new Date());
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+const R=v=>v==null?'–':Math.round(v);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const fDay=new Intl.DateTimeFormat('it-IT',{weekday:'long',day:'numeric',month:'long'});
+const fShort=new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',month:'short'});
+const fLong=new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'long',year:'numeric'});
+const fDM=new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'short'});
+const fMon=new Intl.DateTimeFormat('it-IT',{month:'short'});
+const fWd=new Intl.DateTimeFormat('it-IT',{weekday:'long'});
+const fMonY=new Intl.DateTimeFormat('it-IT',{month:'long',year:'numeric'});
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const P={home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+ pill:'<rect x="1.5" y="8.5" width="21" height="7" rx="3.5" transform="rotate(-45 12 12)"/><path d="m8.5 8.5 7 7"/>',
+ pulse:'<path d="M3 12h4l2-5 4 10 2-5h6"/>',
+ chart:'<path d="M5 20V11M11 20V5M17 20v-6M2 20h20"/>',
+ cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/>',
+ camera:'<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
+ bell:'<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ heart:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/>',
+ gauge:'<path d="M4 16a8 8 0 1 1 16 0"/><path d="m12 16 4-5"/><path d="M4 20h16"/>',
+ cloud:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 11 3.5 3.5 0 0 0 7 18z"/>',
+ smile:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4 4 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
+ doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+ check:'<path d="m5 12 4.5 4.5L19 7"/>',
+ x:'<path d="M6 6l12 12M18 6 6 18"/>',
+ back:'<path d="M15 5l-7 7 7 7"/>',
+ edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+ alert:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
+ scale:'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M7.5 10a4.5 4.5 0 0 1 9 0z"/><path d="m12 10 1.6-2.4"/>'};
+const ico=new Proxy({},{get:(_,n)=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]||''}</svg>`});
+
+const MOODS=['😣','🙁','😐','🙂','😄'], MOODL=['Molto male','Male','Così così','Bene','Molto bene'];
+const ENERGY=['Molto stanco','Un po\' stanco','Normale','In forma'];
+const ACTS=['Camminata','Ginnastica','Bicicletta','Lavori in casa','Giardino o orto','Spesa a piedi','Altro'];
+const SLEEPL=['Male','Poco bene','Così così','Bene','Benissimo'];
+const fmt1=v=>v==null?'–':v.toFixed(1).replace('.',',');
+const SYMS=['Nessuno','Mal di testa','Vertigini','Gambe gonfie','Fiato corto','Palpitazioni','Nausea','Dolore al petto'];
+const MEALS=['Colazione','Pranzo','Cena'];
+const BPCTX=['A riposo','Appena sveglio','Dopo le medicine','Dopo il caffè','Dopo uno sforzo','Agitato','Fa freddo','Fa caldo'];
+const HRCTX=['Appena sveglio','A riposo','Dopo uno sforzo','Dopo il caffè','Agitato','Fa freddo','Fa caldo'];
+const LIM={sys:[60,260],dia:[30,160],pulse:[30,200],sys2:[60,260],dia2:[30,160],pulse2:[30,200],bpm:[30,220],sleepH:[0,14],water:[0,20],actMin:[0,300],kg:[30,250]};
+/* Average daily temperature per month around Jesi (AN), used only by the simulated weather. */
+const MON_BASE=[6,7,10,13,18,22,25,25,21,16,11,7];
+
+/* Weather: in the prototype it is simulated per day; the Android app reads it from a weather service. */
+function simWeather(k){const d=kd(k);const dn=Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);
+  const h=(dn*2654435761)>>>0;const temp=Math.round(MON_BASE[d.getMonth()]+4*Math.sin(dn/3.3)+(h%5)-2);
+  return {temp,cond:['Sereno','Poco nuvoloso','Nuvoloso','Pioggia'][(h>>>3)%4]}}
+/* Real weather from Open-Meteo (free, no key). Example data falls back to the simulated weather. */
+function weather(k){return (S&&S.wx&&S.wx[k])||(S&&S.demo?simWeather(k):null)}
+function wcode(c){return c==null?'':c===0?'Sereno':c<=2?'Poco nuvoloso':c===3?'Nuvoloso':c<=48?'Nebbia':c<=57?'Pioviggine':c<=67?'Pioggia':c<=77?'Neve':c<=82?'Rovesci':'Temporale'}
+async function fetchWeather(){const st=S.settings;if(st.lat==null||st.lon==null)return;
+  try{const j=await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${st.lat}&longitude=${st.lon}&current=temperature_2m,weather_code&daily=temperature_2m_mean,weather_code&past_days=31&forecast_days=1&timezone=auto`)).json();
+    S.wx=S.wx||{};((j.daily&&j.daily.time)||[]).forEach((k,i)=>{const t=j.daily.temperature_2m_mean[i];if(t!=null)S.wx[k]={temp:Math.round(t),cond:wcode(j.daily.weather_code[i])}});
+    if(j.current)S.wx[today()]={temp:Math.round(j.current.temperature_2m),cond:wcode(j.current.weather_code)};
+    save();if($('#sheetWrap').hidden)render()}catch(e){}}
+async function geocode(name){const q=name.replace(/\(.*?\)/g,'').trim();if(!q)return;
+  try{const j=await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=it&countryCode=IT`)).json();
+    const p=j.results&&j.results[0];if(!p){toast('Non trovo questa città. Prova a scriverla in un altro modo.');return}
+    S.settings.lat=p.latitude;S.settings.lon=p.longitude;save();toast(`Meteo impostato su ${p.name}`);fetchWeather()}
+  catch(e){toast('Senza internet non riesco a trovare la città.')}}
+
+function makeDemo(){
+  const r=rng(11), t0=new Date(); t0.setHours(0,0,0,0); const nm=nowMin(), now=new Date();
+  const meds=[
+    {id:'lob',name:'Medicina A',dose:'5 mg',active:'Esempio',times:['08:00'],note:'1 compressa al mattino',stock:20,pack:28,form:'compressa'},
+    {id:'olm',name:'Medicina B',dose:'10 mg',active:'Esempio',times:['08:00'],note:'1 compressa al mattino',stock:6,pack:28,form:'compressa'},
+    {id:'ros',name:'Medicina C',dose:'20 mg',active:'Esempio',times:['20:00'],note:'1 compressa dopo cena',stock:25,pack:30,form:'compressa'}];
+  const s={v:1,demo:true,settings:{name:'Mario',city:'Jesi (AN)',cap:'60035',lat:43.5225,lon:13.2437,bpTimes:['11:00','18:00'],big:false},wx:{},meds,doses:{},bp:[],hr:[],checkins:{},visits:[]};
+  const skip={4:1,11:1,19:1,25:1}, shortSleep={2:1,4:1,9:1,15:1,22:1,26:1};
+  for(let d=29;d>=0;d--){
+    const day=addDays(t0,-d), k=dkey(day), temp=simWeather(k).temp;
+    const sleep=shortSleep[d]?5+Math.round(r()*2)/2:6.5+Math.round(r()*4)/2;
+    const active=r()>0.35;
+    s.doses[k]={}; let skipped=false;
+    meds.forEach(m=>m.times.forEach(t=>{
+      if(d===0&&nm-toMin(t)<75)return;
+      let st=r()<0.03?'skipped':'taken'; if(m.id==='lob'&&skip[d])st='skipped';
+      if(st==='skipped')skipped=true; s.doses[k][m.id+'@'+t]=st;}));
+    const base=125+(sleep<6?7:0)+(temp<9?5:0)+(skipped?9:0)+(active?0:4);
+    const mk=(h,mi,off,ctx)=>{const t=new Date(day);t.setHours(h,mi+Math.floor(r()*15));if(t>now)return;
+      const sys=Math.round(base+off+r()*10-5), dia=Math.round(sys*0.62+r()*6-2);
+      s.bp.push({id:uid(),t:t.toISOString(),sys,dia,pulse:Math.round(62+r()*12),arm:'Sinistro',pos:'Seduto',ctx,temp})};
+    mk(11,0,2,temp<9?['A riposo','Fa freddo']:['A riposo']); if(r()>0.15||d<2)mk(18,0,-3,['A riposo']);
+    if(d>0&&r()<0.88){
+      const mood=Math.max(1,Math.min(5,sleep<6?2+Math.round(r()):3+Math.round(r()*1.6)));
+      const acts=active?(r()>0.3?['Camminata']:[ACTS[Math.floor(r()*6)]]):[];
+      const sym=skipped&&r()<0.8?['Mal di testa']:sleep<6&&r()<0.4?['Vertigini']:['Nessuno'];
+      s.checkins[k]={mood,energy:sleep<6?1:2+Math.round(r()),sleepH:sleep,sleepVote:sleep<6?1+Math.round(r()):3+Math.round(r()*2),
+        meals:r()>0.08?['Colazione','Pranzo','Cena']:['Colazione','Pranzo'],water:4+Math.round(r()*4),
+        active:active?'Sì':'No',activity:acts,actMin:active?20+5*Math.round(r()*6):0,symptoms:sym,
+        note:d===11?'Stamattina la pastiglia me la sono scordata.':''};
+    }
+  }
+  s.weight=[[28,91.8],[21,91.6],[14,91.5],[7,91.3]].map(([d,kg])=>{const t=addDays(t0,-d);t.setHours(7,30);return{id:uid(),t:t.toISOString(),kg}});
+  {const t=new Date(t0);t.setHours(7,30);s.weight.push({id:uid(),t:(t>now?now:t).toISOString(),kg:91})}
+  s.visits=[{id:uid(),type:'Visita',title:'Visita di controllo',date:'2027-05-01',tbd:true,time:'',place:'',doctor:'Dott. Rossi',notes:'Portare il report della pressione e la lista delle medicine.',result:'',remind:true}];
+  sortAll(s); return s;
+}
+function sortAll(s=S){s.bp.sort((a,b)=>a.t<b.t?-1:1);s.hr.sort((a,b)=>a.t<b.t?-1:1);(s.weight=s.weight||[]).sort((a,b)=>a.t<b.t?-1:1)}
+/* Heartbeat comes from the pressure monitor; separate heartbeat entries are added on top. */
+function hrAll(){return S.bp.map(r=>({id:r.id,t:r.t,bpm:r.pulse,ctx:r.ctx||[],irr:r.irr||'No',temp:r.temp})).concat(S.hr).sort((a,b)=>a.t<b.t?-1:1)}
+
+let S;
+function emptyState(){return{v:1,demo:false,settings:{name:'',city:'',cap:'',lat:null,lon:null,bpTimes:['11:00','18:00'],big:false},meds:[],doses:{},bp:[],hr:[],weight:[],checkins:{},visits:[],wx:{}}}
+function load(){try{const j=localStorage.getItem(LS);if(j){S=JSON.parse(j);return}}catch(e){} S=emptyState()}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function importData(o){if(!o||!Array.isArray(o.meds))throw new Error('formato');const base=emptyState();
+  S=Object.assign(base,o,{settings:Object.assign(base.settings,o.settings||{}),demo:false});sortAll();save()}
+load();
+/* A private setup link (#setup=...) loads the starting data on the phone; the data never sits in the public code. */
+(function(){const h=location.hash;if(!h.startsWith('#setup='))return;
+  try{const b=h.slice(7).replace(/-/g,'+').replace(/_/g,'/');importData(JSON.parse(decodeURIComponent(escape(atob(b)))));
+    setTimeout(()=>toast(`Ciao ${S.settings.name||''}! Dati caricati 👍`),600)}
+  catch(e){setTimeout(()=>toast('Questo link di configurazione non funziona.'),600)}
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){location.hash=''}})();
+
+/* ---------- data helpers ---------- */
+function groupsFor(k){const map={};S.meds.forEach(m=>m.times.forEach(t=>{(map[t]=map[t]||[]).push({m,key:m.id+'@'+t,st:(S.doses[k]||{})[m.id+'@'+t]||null})}));
+  return Object.keys(map).sort().map(t=>({t,items:map[t]}))}
+function groupState(g,isToday){if(g.items.every(i=>i.st==='taken'))return 'done';if(g.items.every(i=>i.st))return g.items.every(i=>i.st==='skipped')?'skipped':'partial';
+  if(!isToday)return 'missed';const diff=nowMin()-toMin(g.t);if(diff>30)return 'late';if(diff>=-15)return 'now';return 'later'}
+const GLAB={done:['ok','Prese'],partial:['warn','In parte'],skipped:['bad','Saltate'],late:['warn','In ritardo'],now:['info','Adesso'],later:['neutral','Più tardi'],missed:['bad','Non segnate']};
+function setDose(k,key,st){S.doses[k]=S.doses[k]||{};const prev=S.doses[k][key];const m=S.meds.find(x=>key.startsWith(x.id+'@'));
+  if(m){if(st==='taken'&&prev!=='taken')m.stock=Math.max(0,m.stock-1);if(prev==='taken'&&st!=='taken')m.stock++}
+  if(st)S.doses[k][key]=st;else delete S.doses[k][key]}
+function rangeKeys(n,off=0){const t=new Date();return Array.from({length:n},(_,i)=>dkey(addDays(t,-(off+n-1-i))))}
+const inKeys=(arr,keys)=>{const s=new Set(keys);return arr.filter(r=>s.has(dkey(new Date(r.t))))};
+const hour=r=>new Date(r.t).getHours();
+function doseCount(keys,medId){let tot=0,taken=0;const tk=today();keys.forEach(k=>groupsFor(k).forEach(g=>g.items.forEach(i=>{
+  if(medId&&i.m.id!==medId)return;if(k===tk&&!i.st&&toMin(g.t)>nowMin()-30)return;tot++;if(i.st==='taken')taken++})));
+  return{tot,taken,pct:tot?Math.round(taken/tot*100):0}}
+function summary(keys){
+  const bp=inKeys(S.bp,keys),hr=inKeys(hrAll(),keys),w=inKeys(S.weight||[],keys),m=bp.filter(r=>hour(r)<12),e=bp.filter(r=>hour(r)>=17);
+  const rest=hr.filter(r=>!r.ctx.includes('Dopo uno sforzo'));
+  const cis=keys.map(k=>S.checkins[k]).filter(Boolean);const sym={};
+  keys.forEach(k=>((S.checkins[k]||{}).symptoms||[]).forEach(x=>{if(x!=='Nessuno')(sym[x]=sym[x]||[]).push(k)}));
+  const hi=bp.slice().sort((a,b)=>b.sys-a.sys)[0],lo=bp.slice().sort((a,b)=>a.sys-b.sys)[0];
+  return{bp,hr,w,sys:avg(bp.map(r=>r.sys)),dia:avg(bp.map(r=>r.dia)),mSys:avg(m.map(r=>r.sys)),mDia:avg(m.map(r=>r.dia)),eSys:avg(e.map(r=>r.sys)),eDia:avg(e.map(r=>r.dia)),
+    hi,lo,high:bp.filter(r=>r.sys>=135||r.dia>=85).length,hrAvg:avg(rest.map(r=>r.bpm)),hrMin:rest.length?Math.min(...rest.map(r=>r.bpm)):null,hrMax:rest.length?Math.max(...rest.map(r=>r.bpm)):null,
+    dose:doseCount(keys),sleep:avg(cis.map(c=>c.sleepH)),sleepVote:avg(cis.filter(c=>c.sleepVote).map(c=>c.sleepVote)),
+    act:cis.filter(c=>c.active==='Sì'),actMin:cis.reduce((t,c)=>t+(c.active==='Sì'?(+c.actMin||0):0),0),
+    mood:avg(cis.filter(c=>c.mood).map(c=>c.mood)),sym,cis}}
+function insights(){
+  const keys=rangeKeys(30),out=[];
+  const mSys=k=>{const r=inKeys(S.bp,[k]).filter(x=>hour(x)<12);return r.length?avg(r.map(x=>x.sys)):null};
+  const cmp=(pred,text)=>{const a=[],b=[];keys.forEach(k=>{const v=mSys(k);if(v==null)return;const p=pred(k);if(p==null)return;(p?a:b).push(v)});
+    if(a.length>=2&&b.length>=2){const d=Math.round(avg(a)-avg(b));if(d>=3)out.push(text(d,a.length))}};
+  cmp(k=>S.checkins[k]&&S.checkins[k].sleepVote?S.checkins[k].sleepVote<=2:null,(d,n)=>`Dopo le notti dormite male (voto 1 o 2), la massima del mattino era più alta di <strong>${d} mmHg</strong> (${n} giorni).`);
+  cmp(k=>S.checkins[k]&&S.checkins[k].active?S.checkins[k].active==='No':null,(d,n)=>`Nei giorni senza movimento, la massima era più alta di <strong>${d} mmHg</strong> rispetto ai giorni in cui ti sei mosso (${n} giorni).`);
+  cmp(k=>S.doses[k]&&Object.keys(S.doses[k]).length?Object.values(S.doses[k]).includes('skipped'):null,(d,n)=>`Nei giorni con una medicina saltata, la massima era più alta di <strong>${d} mmHg</strong> (${n} giorni).`);
+  cmp(k=>{const w=weather(k);return w?w.temp<9:null},(d,n)=>`Nei giorni freddi, sotto i 9°C, la massima era più alta di <strong>${d} mmHg</strong> (${n} giorni).`);
+  return out}
+function bpCat(r){const s=r.sys,d=r.dia;
+  if(s>=180||d>=110)return{cls:'crit',label:'Molto alta',msg:'Valori molto alti. Resta seduto tranquillo per 5 minuti e misura di nuovo. Se restano così, o se hai dolore al petto, forte mal di testa o difficoltà a parlare, chiama il 112.'};
+  if(s>=135||d>=85)return{cls:'bad',label:'Alta',msg:'Un po\' alta: sopra 135/85, la soglia per le misure fatte a casa. Se ti capita spesso, parlane col medico.'};
+  if(s<90||d<60)return{cls:'warn',label:'Bassa',msg:'Pressione bassa. Se hai capogiri siediti e bevi un bicchiere d\'acqua. Avvisa il medico se si ripete.'};
+  if(s>=130||d>=80)return{cls:'warn',label:'Al limite',msg:'Un pelo sopra l\'ideale. Niente paura, continua a misurarla mattina e sera.'};
+  return s>=120?{cls:'ok',label:'Normale',msg:'Tutto a posto, valori nella norma 👍'}:{cls:'ok',label:'Ottimale',msg:'Perfetta, valori ottimali! 👏'}}
+function hrCat(r){if(r.bpm<50)return{cls:'warn',label:'Bassi',msg:'Battiti sotto 50 al minuto. Se ti senti debole o hai capogiri, avvisa il medico.'};
+  if(r.bpm>100)return r.ctx.includes('Dopo uno sforzo')?{cls:'ok',label:'Normali dopo uno sforzo',msg:'Dopo uno sforzo è normale. Riprova dopo 10 minuti di riposo.'}:{cls:'bad',label:'Alti',msg:'Più di 100 battiti a riposo. Riposa e rimisura; se resta alto, avvisa il medico.'};
+  return{cls:'ok',label:'Nella norma',msg:'Tutto a posto, battiti nella norma (tra 50 e 100 al minuto) 👍'}}
+
+/* ---------- state for screens ---------- */
+const ROUTES=['oggi','farmaci','misure','storico','visite','report'];
+let route=ROUTES.includes(location.hash.slice(1))?location.hash.slice(1):'oggi';
+let misTab='pressione',repDays=30,openDay=null,lastRes=null,ocr=null,sheetR=null;
+let bpD,hrD,ci,ciStep=0,medD,visD,delArm=false;
+function newBp(){const l=S.bp[S.bp.length-1];return{sys:l?l.sys:125,dia:l?l.dia:80,pulse:l?l.pulse:70,sys2:l?l.sys:125,dia2:l?l.dia:80,pulse2:l?l.pulse:70,two:false,arm:'Sinistro',pos:'Seduto',ctx:[],irr:'No'}}
+function newHr(){const a=hrAll(),l=a[a.length-1];return{bpm:l?l.bpm:68,ctx:[],irr:'No'}}
+bpD=newBp();hrD=newHr();
+let wD={kg:(S.weight&&S.weight.length)?S.weight[S.weight.length-1].kg:75};
+const OBJ={bp:()=>bpD,hr:()=>hrD,ci:()=>ci,vis:()=>visD};
+const DRAFT=f=>({bpm:hrD,sleepH:ci,water:ci,actMin:ci,kg:wD}[f]||bpD);
+
+/* ---------- small renderers ---------- */
+const chips=(o,k,opts,multi)=>`<div class="chips">${opts.map(v=>{const cur=OBJ[o]()[k];const on=multi?(cur||[]).includes(v):cur===v;
+  return `<button type="button" class="chip" data-a="chip" data-o="${o}" data-k="${k}" data-v="${esc(v)}" ${multi?'data-multi="1"':''} aria-pressed="${on}">${on?ico.check:''}${esc(v)}</button>`}).join('')}</div>`;
+const stepper=(f,label,unit,val,hint)=>`<div class="stepper"><span class="st-label">${label}${hint?`<small>${hint}</small>`:''}</span>
+  <div class="st-row"><button type="button" class="st-btn" data-a="step" data-f="${f}" data-d="-1" aria-label="${label}: meno">−</button>
+  <input id="f-${f}" data-f="${f}" class="st-in" type="number" inputmode="decimal" value="${val}" aria-label="${label} (${unit})">
+  <button type="button" class="st-btn" data-a="step" data-f="${f}" data-d="1" aria-label="${label}: più">+</button></div></div>`;
+
+function lineChart(keys,series,o){
+  const W=340,H=o.h||190,L=34,Rt=30,T=12,B=24,n=keys.length,min=o.min,max=o.max;
+  const X=i=>L+(n<2?0:i*(W-L-Rt)/(n-1)),Y=v=>T+(max-Math.max(min,Math.min(max,v)))*(H-T-B)/(max-min);
+  if(!series.some(s=>s.vals.some(v=>v!=null)))return `<p class="empty">Nessuna misurazione in questo periodo.</p>`;
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label)}">`;
+  for(let v=min;v<=max;v+=o.step)s+=`<line class="grid" x1="${L}" x2="${W-Rt}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ax" x="${L-6}" y="${Y(v)+3.5}" text-anchor="end">${v}</text>`;
+  (o.refs||[]).forEach(v=>s+=`<line class="ref" x1="${L}" x2="${W-Rt}" y1="${Y(v)}" y2="${Y(v)}"/>`);
+  const every=Math.max(1,Math.ceil(n/6));
+  keys.forEach((k,i)=>{if((n-1-i)%every===0){const d=kd(k);s+=`<text class="ax" x="${X(i)}" y="${H-6}" text-anchor="middle">${d.getDate()}/${d.getMonth()+1}</text>`}});
+  series.forEach(se=>{let p='',pen=false,last=null;se.vals.forEach((v,i)=>{if(v==null){pen=false;return}p+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' ';pen=true;last=i});
+    s+=`<path class="line" d="${p}" style="stroke:var(${se.c})"/>`;
+    se.vals.forEach((v,i)=>{if(v!=null&&i!==last)s+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" style="fill:var(${se.c})"/>`});
+    if(last!=null)s+=`<circle cx="${X(last)}" cy="${Y(se.vals[last])}" r="5.5" style="fill:var(${se.c});stroke:var(--surface);stroke-width:2.5"/><text class="lab" x="${X(last)+8}" y="${Y(se.vals[last])+4}" style="fill:var(${se.c})">${Math.round(se.vals[last])}</text>`});
+  return s+'</svg>'}
+function bpChart(keys){const day=f=>keys.map(k=>{const r=inKeys(S.bp,[k]);return r.length?avg(r.map(f)):null});
+  return lineChart(keys,[{c:'--sys',vals:day(r=>r.sys)},{c:'--dia',vals:day(r=>r.dia)}],{min:60,max:180,step:20,refs:[135,85],label:'Pressione media giornaliera'})+
+  `<div class="legend"><span><i style="background:var(--sys)"></i>Massima</span><span><i style="background:var(--dia)"></i>Minima</span><span><i class="dash"></i>Soglia a casa 135/85</span></div>`}
+function hrChart(keys){const H=hrAll();const vals=keys.map(k=>{const r=inKeys(H,[k]).filter(x=>hour(x)<12);return r.length?avg(r.map(x=>x.bpm)):null});
+  return lineChart(keys,[{c:'--hr',vals}],{min:40,max:110,step:10,refs:[100],label:'Battiti al mattino',h:170})+
+  `<div class="legend"><span><i style="background:var(--hr)"></i>Battiti al mattino, a riposo</span><span><i class="dash"></i>100 al minuto</span></div>`}
+
+/* ---------- screens ---------- */
+function viewOggi(){
+  const now=new Date(),k=today(),w=weather(k),h=now.getHours();
+  const hi=h<13?'Buongiorno':h<18?'Buon pomeriggio':'Buonasera';
+  const gs=groupsFor(k),next=gs.find(g=>g.items.some(i=>!i.st)),ciT=S.checkins[k];
+  const lb=S.bp[S.bp.length-1],W=S.weight||[],lw=W[W.length-1];
+  const nv=S.visits.filter(v=>v.date>=k).sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1)[0];
+  let nextHTML;
+  if(next){const st=groupState(next,true);const lab=GLAB[st];
+    const title=st==='late'?`Ehi, mancano ancora quelle delle ${next.t}`:st==='now'?`È ora delle medicine!`:`Le prossime medicine`;
+    nextHTML=`<section class="card next ${st}"><div class="next-head"><span class="pill ${lab[0]}">${lab[1]}</span><span class="next-time">${next.t}</span></div>
+      <h2 class="h2">${title}</h2><ul class="doses">${next.items.map(i=>doseRow(i,k)).join('')}</ul>
+      <div class="btn-row"><button class="btn btn-primary" data-a="group" data-t="${next.t}" data-s="taken">${ico.check}Ho preso tutto</button>
+      <button class="btn btn-ghost" data-a="group" data-t="${next.t}" data-s="skipped">Non le ho prese</button></div></section>`}
+  else nextHTML=`<section class="card done-card">${ico.check}<div><h2 class="h2">${gs.length?'Fatto! Medicine di oggi tutte segnate':'Nessuna medicina in programma'}</h2><p class="muted">${gs.length?`Ci risentiamo domani alle ${gs[0].t}.`:'Aggiungile nella sezione Medicine.'}</p></div></section>`;
+  return `<section class="hello"><p class="eyebrow">${cap(fDay.format(now))}</p><h1 class="h1">${hi}${S.settings.name?', '+esc(S.settings.name):''}</h1>
+    ${w?`<p class="wx">${ico.cloud}<span>${w.temp}°C · ${w.cond}${S.settings.city?' a '+esc(S.settings.city):''}</span></p>`:''}</section>
+  ${!S.meds.length&&!S.demo?welcomeCard():nextHTML}
+  ${bpTodayCard()}
+  <section class="quick" aria-label="Aggiungi una misura">
+    <button class="q" data-a="go" data-r="misure" data-t="pressione">${ico.gauge}<span>Pressione</span></button>
+    <button class="q" data-a="go" data-r="misure" data-t="peso">${ico.scale}<span>Peso</span></button>
+    <button class="q" data-a="checkin">${ico.smile}<span>Come stai?</span></button></section>
+  ${ciT?`<section class="card"><div class="row-between"><h2 class="h3">Come stai oggi</h2><button class="btn btn-ghost btn-sm" data-a="checkin">Modifica</button></div>
+      <p><span class="emo">${MOODS[ciT.mood-1]||''}</span> ${MOODL[ciT.mood-1]||''} · sonno ${ciT.sleepVote||'–'}/5 · ${ciT.active==='Sì'?`movimento: ${esc(ciT.activity.join(', ').toLowerCase()||'sì')}${ciT.actMin?', '+ciT.actMin+' min':''}`:ciT.active==='No'?'niente movimento':''}</p></section>`
+    :`<section class="card"><h2 class="h3">Come stai oggi?</h2><p class="muted">Sette domande al volo su umore, sonno, pasti e disturbi. In 30 secondi hai finito.</p>
+      <button class="btn btn-primary btn-block" data-a="checkin">${ico.smile}Dai, rispondi</button></section>`}
+  <section class="card"><h2 class="h3">Le medicine di oggi</h2><ul class="list">${gs.map(g=>{const lab=GLAB[groupState(g,true)];
+    return `<li class="tl"><span class="tl-time">${g.t}</span><span class="tl-names">${g.items.map(i=>esc(i.m.name)).join(', ')}</span><span class="pill ${lab[0]}">${lab[1]}</span></li>`}).join('')||'<li class="empty">Nessuna medicina.</li>'}</ul></section>
+  <section class="tiles">
+    <div class="tile"><span class="muted small strong">Ultima pressione</span>${lb?`<span class="tile-val">${lb.sys}/${lb.dia}</span><span class="small strong">${lb.pulse} battiti</span><span><span class="pill ${bpCat(lb).cls}">${bpCat(lb).label}</span></span><span class="muted small">${whenStr(lb.t)}</span>`:'<span class="muted">Ancora nessuna</span>'}</div>
+    <div class="tile"><span class="muted small strong">Peso</span>${lw?`<span class="tile-val">${fmt1(lw.kg)} <small>kg</small></span><span><span class="pill ${wCat(lw).cls}">${wCat(lw).label}</span></span><span class="muted small">${whenStr(lw.t)}</span>`:'<span class="muted">Ancora nessuno</span>'}</div></section>
+  ${nv?`<section class="card"><div class="row-between"><h2 class="h3">Prossimo appuntamento</h2><button class="btn btn-ghost btn-sm" data-a="go" data-r="visite">Vedi tutti</button></div>
+    <p><strong>${esc(nv.title)}</strong>${nv.doctor?' · '+esc(nv.doctor):''}<br><span class="muted">${nv.tbd?cap(fMonY.format(kd(nv.date)))+', giorno da fissare':`${cap(fWd.format(kd(nv.date)))} ${fDM.format(kd(nv.date))} alle ${nv.time}`}${nv.place?' · '+esc(nv.place):''}</span></p></section>`:''}
+  <p class="disclaimer">L'app registra i valori e non sostituisce il parere del medico.</p>`}
+function welcomeCard(){return `<section class="card"><h2 class="h2">Benvenuto in SaluteRobi 👋</h2>
+  <p>Per iniziare aggiungi le medicine, oppure carica i dati che ti hanno preparato.</p>
+  <button class="btn btn-primary btn-block" data-a="medEdit">${ico.plus}Aggiungi una medicina</button>
+  <label class="btn btn-ghost btn-block">${ico.doc}Carica i dati da un file<input type="file" accept="application/json,.json" id="imp-file" hidden></label>
+  <button class="btn btn-ghost btn-block" data-a="resetDemo">Prova con dati di esempio</button>
+  <p class="muted small">Nome e città per il meteo si impostano dall'ingranaggio in alto.</p></section>`}
+function bpTodayCard(){const rs=inKeys(S.bp,[today()]),nm=nowMin(),slots=S.settings.bpTimes||['11:00','18:00'];
+  const rows=slots.map(t=>{const sm=toMin(t),r=rs.find(x=>{const d=new Date(x.t);return Math.abs(d.getHours()*60+d.getMinutes()-sm)<=150});
+    const st=r?['ok','Fatta']:nm>sm+30?['warn','Da fare']:nm>=sm-15?['info','Adesso']:['neutral','Più tardi'];
+    return `<li class="tl"><span class="tl-time">${t}</span><span class="tl-names">${r?`<strong>${r.sys}/${r.dia}</strong> · ${r.pulse} battiti`:'Pressione e battiti'}</span><span class="pill ${st[0]}">${st[1]}</span></li>`}).join('');
+  return `<section class="card"><div class="row-between"><h2 class="h3">Pressione di oggi</h2><button class="btn btn-ghost btn-sm" data-a="go" data-r="misure" data-t="pressione">${ico.gauge}Misura</button></div><ul class="list">${rows}</ul></section>`}
+function whenStr(iso){const d=new Date(iso),k=dkey(d);const yk=dkey(addDays(new Date(),-1));
+  return (k===today()?'Oggi':k===yk?'Ieri':cap(fShort.format(d)))+' alle '+hm(d)}
+function doseRow(i,k){const btn=i.st==='taken'?`<button class="mini ok" data-a="dose" data-k="${k}" data-key="${i.key}" data-s="" aria-label="${esc(i.m.name)} presa, tocca per annullare">${ico.check}Presa</button>`
+  :i.st==='skipped'?`<button class="mini bad" data-a="dose" data-k="${k}" data-key="${i.key}" data-s="" aria-label="Saltata, tocca per annullare">Saltata</button>`
+  :`<button class="mini" data-a="dose" data-k="${k}" data-key="${i.key}" data-s="taken">Segna presa</button>`;
+  return `<li class="dose"><span class="pilldot" aria-hidden="true"></span><div class="dose-txt"><strong>${esc(i.m.name)} ${esc(i.m.dose)}</strong><span class="muted small">${esc(i.m.note||'')}</span></div>${btn}</li>`}
+
+function viewFarmaci(){const ad=doseCount(rangeKeys(7));
+  return `<div class="title-row"><h1 class="h1">Medicine</h1><button class="btn btn-primary btn-sm" data-a="medEdit">${ico.plus}Aggiungi</button></div>
+  <section class="card"><div class="row">${ico.bell}<div><h2 class="h3">Promemoria</h2><p class="muted small">Quando apri SaluteRobi ti mostra subito le medicine da prendere. Le notifiche a telefono chiuso arriveranno con la prossima versione.</p></div></div></section>
+  <section class="card"><div class="row-between"><h2 class="h3">Prese negli ultimi 7 giorni</h2><span class="big-num">${ad.pct}%</span></div>
+    <div class="bar" role="img" aria-label="${ad.pct} per cento"><span style="width:${ad.pct}%"></span></div><p class="muted small">${ad.taken} dosi prese su ${ad.tot}.</p></section>
+  ${S.meds.map(medCard).join('')||'<p class="empty">Nessuna medicina. Tocca Aggiungi per inserire la prima.</p>'}`}
+function medCard(m){const keys=rangeKeys(7),tk=today(),perDay=m.times.length||1,left=Math.floor(m.stock/perDay),low=left<=7;
+  const dots=keys.map(k=>{const sts=m.times.map(t=>(S.doses[k]||{})[m.id+'@'+t]);const d=kd(k);let c='miss';
+    if(sts.every(s=>s==='taken'))c='ok';else if(sts.some(s=>s==='skipped'))c='bad';else if(k===tk)c='today';
+    return `<span class="dd ${c}" title="${fShort.format(d)}"><i></i>${'DLMMGVS'[d.getDay()]}</span>`}).join('');
+  return `<article class="card"><div class="med-head"><div><h2 class="h2">${esc(m.name)} <span class="muted">${esc(m.dose)}</span></h2>${m.active?`<p class="small muted">${esc(m.active)}</p>`:''}<p>${esc(m.note||'')}</p></div>
+    <button class="icon-btn" data-a="medEdit" data-id="${m.id}" aria-label="Modifica ${esc(m.name)}">${ico.edit}</button></div>
+    <div class="times">${m.times.map(t=>`<span class="time-chip">${ico.bell}${t}</span>`).join('')}</div>
+    <div class="stock"><span>Ne restano <strong>${m.stock}</strong>, circa ${left} giorni${m.pack?` · confezione da ${m.pack}`:''}</span>${low?`<span class="pill warn">Chiedi la ricetta</span>`:''}</div>
+    <div class="week" aria-label="Ultimi 7 giorni">${dots}</div></article>`}
+
+function viewMisure(){return `<h1 class="h1">Misure</h1>
+  <div class="seg" role="tablist"><button role="tab" data-a="mistab" data-v="pressione" aria-selected="${misTab==='pressione'}">Pressione</button><button role="tab" data-a="mistab" data-v="battiti" aria-selected="${misTab==='battiti'}">Battiti</button><button role="tab" data-a="mistab" data-v="peso" aria-selected="${misTab==='peso'}">Peso</button></div>
+  ${misTab==='pressione'?bpView():misTab==='peso'?wView():hrView()}`}
+function wCat(r){const prev=(S.weight||[]).filter(x=>x.t<r.t),p=prev[prev.length-1];
+  if(!p)return{cls:'ok',label:'Prima pesata',msg:'Ottimo, da qui in poi vediamo come va.'};
+  const days=(new Date(r.t)-new Date(p.t))/864e5,dk=Math.round((r.kg-p.kg)*10)/10,lab=`${dk>0?'+':''}${fmt1(dk)} kg`;
+  if(dk>=2&&days<=4)return{cls:'bad',label:lab,msg:'Sei salito di 2 kg o più in pochi giorni. Se hai anche le gambe gonfie o il fiato corto, senti il medico.'};
+  return{cls:'ok',label:lab,msg:dk<0?'In calo rispetto all\'ultima pesata 👍':dk===0?'Stabile rispetto all\'ultima pesata.':'Un pochino in più rispetto all\'ultima pesata, niente di strano.'}}
+function wChart(pts){if(pts.length<2)return '<p class="empty">Servono almeno due pesate per il grafico.</p>';
+  const v=pts.map(p=>p.kg),mn=Math.floor(Math.min(...v)-1),mx=Math.ceil(Math.max(...v)+1);
+  return lineChart(pts.map(p=>dkey(new Date(p.t))),[{c:'--primary',vals:v}],{min:mn,max:mx,step:mx-mn>6?2:1,label:'Andamento del peso',h:170})}
+function wView(){const W=S.weight||[],res=lastRes&&lastRes.type==='w'?lastRes.r:null,recent=W.slice(-6).reverse();
+  return `<section class="card"><div class="row-between"><h2 class="h2">Peso</h2><span class="muted small">meglio al mattino, prima di colazione</span></div>
+    <div class="steppers">${stepper('kg','Quanto pesi oggi?','kg',wD.kg,'sulla bilancia di casa')}</div>
+    <button class="btn btn-primary btn-block" data-a="saveW">${ico.check}Salva peso</button></section>
+  ${res?resultCard(fmt1(res.kg),'kg',wCat(res),'peso di oggi'):''}
+  <section class="card"><h2 class="h3">Andamento</h2>${wChart(W.slice(-12))}</section>
+  <section class="card"><h2 class="h3">Ultime pesate</h2><ul class="list">${recent.map(r=>{const c=wCat(r);return `<li class="reading"><span class="reading-val">${fmt1(r.kg)} kg</span>
+    <span class="reading-meta"><span class="small">${whenStr(r.t)}</span></span><span class="pill ${c.cls}">${c.label}</span></li>`}).join('')||'<li class="empty">Ancora nessuna pesata.</li>'}</ul></section>`}
+function bpView(){const d=bpD,w=weather(today()),keys=rangeKeys(14),res=lastRes&&lastRes.type==='bp'?lastRes.r:null;
+  const recent=S.bp.slice(-6).reverse();
+  return `<section class="card">
+    <div class="row-between"><h2 class="h2">Nuova misurazione</h2><span class="muted small">${hm(new Date())}${w?` · fuori ${w.temp}°C`:''}</span></div>
+    ${ocr?`<div class="ocr">${ocr.img?`<img src="${ocr.img}" alt="Foto del misuratore">`:''}<p class="small">${ocr.state==='reading'?'<strong>Sto leggendo i numeri…</strong>':'<strong>Numeri letti dalla foto.</strong> Controllali prima di salvare. Nel prototipo la lettura è simulata.'}</p></div>`:''}
+    <div class="steppers ${ocr&&ocr.state==='done'?'filled':''}">${stepper('sys','Massima','mmHg',d.sys,'sistolica')}${stepper('dia','Minima','mmHg',d.dia,'diastolica')}${stepper('pulse','Battiti','bpm',d.pulse,'dal misuratore')}</div>
+    <label class="check"><input type="checkbox" id="two" ${d.two?'checked':''}>Ho misurato 2 volte, a 1 minuto di distanza</label>
+    ${d.two?`<div class="sub"><p class="small muted">Seconda misurazione. L'app salva la media delle due.</p><div class="steppers">${stepper('sys2','Massima','mmHg',d.sys2)}${stepper('dia2','Minima','mmHg',d.dia2)}${stepper('pulse2','Battiti','bpm',d.pulse2)}</div></div>`:''}
+    <fieldset><legend>Braccio</legend>${chips('bp','arm',['Sinistro','Destro'])}</fieldset>
+    <fieldset><legend>Posizione</legend>${chips('bp','pos',['Seduto','Sdraiato','In piedi'])}</fieldset>
+    <fieldset><legend>In che momento?</legend>${chips('bp','ctx',BPCTX,true)}</fieldset>
+    <fieldset><legend>Il misuratore segnala battito irregolare?</legend>${chips('bp','irr',['No','Sì'])}</fieldset>
+    <button class="btn btn-primary btn-block" data-a="saveBp">${ico.check}Salva misurazione</button></section>
+  ${res?resultCard(`${res.sys}/${res.dia}`,'mmHg',bpCat(res),`Battiti ${res.pulse}${res.temp!=null?` · fuori ${res.temp}°C`:''}${res.two?' · media di 2 misure':''}`):''}
+  <section class="card"><h2 class="h3">Ultimi 14 giorni</h2>${bpChart(keys)}<p class="muted small">Fasce indicative per le misure fatte a casa (linee guida europee ESH). Decide sempre il medico.</p></section>
+  <section class="card"><h2 class="h3">Ultime misurazioni</h2><ul class="list">${recent.map(r=>{const c=bpCat(r);return `<li class="reading"><span class="reading-val">${r.sys}/${r.dia}</span>
+    <span class="reading-meta"><span class="small">${whenStr(r.t)}</span><span class="muted small">${[r.pulse+' bpm',...(r.ctx||[])].join(' · ')}</span></span><span class="pill ${c.cls}">${c.label}</span></li>`}).join('')||'<li class="empty">Ancora nessuna misurazione.</li>'}</ul></section>`}
+function hrView(){const d=hrD,w=weather(today()),keys=rangeKeys(14),res=lastRes&&lastRes.type==='hr'?lastRes.r:null;const recent=hrAll().slice(-6).reverse();
+  return `<section class="card">
+    <div class="row-between"><h2 class="h2">Battiti da soli</h2><span class="muted small">${hm(new Date())}${w?` · fuori ${w.temp}°C`:''}</span></div>
+    <p class="muted small">Di solito i battiti arrivano dal misuratore insieme alla pressione. Qui puoi segnarli anche a parte, per esempio dopo una camminata.</p>
+    <div class="steppers">${stepper('bpm','Battiti al minuto','bpm',d.bpm,'conta per 30 secondi e moltiplica per 2')}</div>
+    <fieldset><legend>In che situazione?</legend>${chips('hr','ctx',HRCTX,true)}</fieldset>
+    <fieldset><legend>Il battito ti sembra irregolare?</legend>${chips('hr','irr',['No','Sì'])}</fieldset>
+    ${w?`<p class="muted small">La temperatura esterna (${w.temp}°C) viene salvata da sola.</p>`:''}
+    <button class="btn btn-primary btn-block" data-a="saveHr">${ico.check}Salva battiti</button></section>
+  ${res?resultCard(res.bpm,'bpm',hrCat(res),`${(res.ctx||[]).join(' · ')||'Nessuna situazione indicata'}${res.temp!=null?` · fuori ${res.temp}°C`:''}`,res.irr==='Sì'?'Hai indicato battito irregolare. Se ti capita spesso, dillo al medico.':''):''}
+  <section class="card"><h2 class="h3">Battiti al mattino, ultimi 14 giorni</h2>${hrChart(keys)}</section>
+  <section class="card"><h2 class="h3">Ultime misurazioni</h2><ul class="list">${recent.map(r=>{const c=hrCat(r);return `<li class="reading"><span class="reading-val">${r.bpm}</span>
+    <span class="reading-meta"><span class="small">${whenStr(r.t)}</span><span class="muted small">${[...(r.ctx||[]),r.temp!=null?r.temp+'°C fuori':''].filter(Boolean).join(' · ')}</span></span><span class="pill ${c.cls}">${c.label}</span></li>`}).join('')||'<li class="empty">Ancora nessuna misurazione.</li>'}</ul></section>`}
+function resultCard(val,unit,c,meta,extra){return `<section class="card result ${c.cls}" id="result" tabindex="-1">
+  <div class="row-between"><span class="res-val">${val} <small>${unit}</small></span><span class="pill ${c.cls}">${c.label}</span></div>
+  <p class="muted small">Salvata ${hm(new Date())} · ${meta}</p>
+  ${c.cls==='crit'?`<div class="alert">${ico.alert}<span>${c.msg}</span></div>`:`<p>${c.msg}</p>`}${extra?`<p class="strong">${extra}</p>`:''}</section>`}
+
+function viewStorico(){const W=S.weight||[],lastW=W[W.length-1],dW=W.length>=2?Math.round((W[W.length-1].kg-W[W.length-2].kg)*10)/10:null;
+  const wk=summary(rangeKeys(7)),pw=summary(rangeKeys(7,7)),ins=insights(),k7=rangeKeys(7);
+  const ds=wk.sys!=null&&pw.sys!=null?Math.round(wk.sys-pw.sys):null;
+  const dTxt=ds==null?'':ds===0?'come la settimana prima':ds<0?`${-ds} in meno della settimana prima`:`${ds} in più della settimana prima`;
+  const sumTxt=`Pressione media ${R(wk.sys)}/${R(wk.dia)}, medicine prese ${wk.dose.pct}%, ${wk.act.length} giorni di movimento, sonno ${fmt1(wk.sleepVote)}/5${lastW?`, peso ${fmt1(lastW.kg)} kg`:''}. ${wk.act.length>=4?'Grande! 💪':'Dai che la prossima settimana ci muoviamo di più! 🚶'}`;
+  return `<div class="title-row"><h1 class="h1">Storico</h1><button class="btn btn-primary btn-sm" data-a="go" data-r="report">${ico.doc}Report per il medico</button></div>
+  <section class="card"><p class="eyebrow">Riepilogo settimanale</p><h2 class="h2">Dal ${fDM.format(kd(k7[0]))} al ${fDM.format(kd(k7[6]))}</h2>
+    <div class="kpis">
+      <div class="kpi"><span class="kpi-l">Pressione media</span><span class="kpi-v">${R(wk.sys)}/${R(wk.dia)}</span><span class="kpi-d">${dTxt}</span></div>
+      <div class="kpi"><span class="kpi-l">Battiti a riposo</span><span class="kpi-v">${R(wk.hrAvg)} bpm</span><span class="kpi-d">da ${R(wk.hrMin)} a ${R(wk.hrMax)}</span></div>
+      <div class="kpi"><span class="kpi-l">Medicine prese</span><span class="kpi-v">${wk.dose.pct}%</span><span class="kpi-d">${wk.dose.taken} su ${wk.dose.tot}</span></div>
+      <div class="kpi"><span class="kpi-l">Movimento</span><span class="kpi-v">${wk.act.length} ${wk.act.length===1?'giorno':'giorni'}</span><span class="kpi-d">${wk.actMin} minuti in tutto</span></div>
+      <div class="kpi"><span class="kpi-l">Sonno e umore</span><span class="kpi-v">${fmt1(wk.sleepVote)}/5 ${wk.mood?MOODS[Math.round(wk.mood)-1]:''}</span><span class="kpi-d">circa ${fmt1(wk.sleep)} ore a notte</span></div>
+      <div class="kpi"><span class="kpi-l">Peso</span><span class="kpi-v">${lastW?fmt1(lastW.kg)+' kg':'–'}</span><span class="kpi-d">${dW!=null?`${dW>0?'+':''}${fmt1(dW)} kg dall'ultima pesata`:'pesati una volta a settimana'}</span></div></div>
+    <p class="small muted">Così arriva la domenica sera sul telefono:</p>
+    <div class="n-card static"><div class="n-head"><span class="n-ic">${ico.heart}</span>SaluteRobi<span class="muted">· domenica 21:00</span></div><p class="n-title">Ecco com'è andata la settimana 📋</p><p class="n-body">${sumTxt}</p></div></section>
+  ${ins.length?`<section class="card"><h2 class="h3">Cosa si nota negli ultimi 30 giorni</h2><ul class="ins">${ins.map(t=>`<li>${t}</li>`).join('')}</ul><p class="muted small">Sono osservazioni sui dati registrati, non una diagnosi. Parlane con il medico prima di cambiare qualcosa.</p></section>`:''}
+  <section class="card"><h2 class="h3">Pressione, ultimi 30 giorni</h2>${bpChart(rangeKeys(30))}</section>
+  <section class="card"><h2 class="h3">Battiti, ultimi 30 giorni</h2>${hrChart(rangeKeys(30))}</section>
+  <h2 class="sec">Giorno per giorno</h2><div class="days">${rangeKeys(14).reverse().map(dayRow).join('')}</div>`}
+function dayRow(k){const d=kd(k),bp=inKeys(S.bp,[k]),hr=inKeys(S.hr,[k]),c=S.checkins[k],w=weather(k),open=openDay===k,dc=doseCount([k]);
+  const first=bp[0];
+  return `<article class="day ${open?'open':''}"><button class="day-head" data-a="day" data-k="${k}" aria-expanded="${open}">
+    <span class="day-date"><strong>${k===today()?'Oggi':cap(fShort.format(d))}</strong><span class="muted small">${w?w.temp+'°C · ':''}medicine ${dc.taken}/${dc.tot}</span></span>
+    <span class="day-vals">${first?`<span class="pill ${bpCat(first).cls}">${first.sys}/${first.dia}</span>`:''}${c?`<span class="emo" aria-label="${MOODL[c.mood-1]}">${MOODS[c.mood-1]}</span>`:''}</span><span class="chev" aria-hidden="true">›</span></button>
+    ${open?`<div class="day-body">
+      <div class="dl"><h4>Pressione</h4>${bp.map(r=>`<span>${hm(new Date(r.t))} · <strong>${r.sys}/${r.dia}</strong> · ${r.pulse} bpm${r.ctx&&r.ctx.length?' · '+r.ctx.join(', '):''}</span>`).join('')||'<span class="muted">Nessuna misura</span>'}</div>
+      <div class="dl" ${hr.length?'':'hidden'}><h4>Battiti presi a parte</h4>${hr.map(r=>`<span>${hm(new Date(r.t))} · <strong>${r.bpm} bpm</strong>${r.ctx.length?' · '+r.ctx.join(', '):''}${r.irr==='Sì'?' · irregolare':''}</span>`).join('')||'<span class="muted">Nessuna misura</span>'}</div>
+      ${inKeys(S.weight||[],[k]).map(x=>`<div class="dl"><h4>Peso</h4><span>${fmt1(x.kg)} kg</span></div>`).join('')}<div class="dl"><h4>Medicine</h4>${groupsFor(k).map(g=>`<span>${g.t} · ${g.items.map(i=>`${esc(i.m.name)} ${i.st==='taken'?'✓':i.st==='skipped'?'<strong style="color:var(--bad)">saltata</strong>':'<span class="muted">non segnata</span>'}`).join(', ')}</span>`).join('')}</div>
+      <div class="dl"><h4>Come stava</h4>${c?`<span>${MOODS[c.mood-1]} ${MOODL[c.mood-1]} · ${ENERGY[c.energy]}</span><span>Sonno: ${c.sleepVote?`voto ${c.sleepVote}/5 (${SLEEPL[c.sleepVote-1].toLowerCase()})`:'non indicato'}${c.sleepH?` · circa ${c.sleepH} ore`:''}</span><span>Pasti: ${c.meals.join(', ')||'nessuno'} · acqua ${c.water} bicchieri</span><span>Movimento: ${c.active==='Sì'?`sì${c.activity&&c.activity.length?' · '+esc(c.activity.join(', ')):''}${c.actMin?' · '+c.actMin+' min':''}`:c.active==='No'?'no':'non indicato'}</span><span>Disturbi: ${c.symptoms.join(', ')||'–'}</span>${c.note?`<span>Nota: “${esc(c.note)}”</span>`:''}`:'<span class="muted">Questionario non compilato</span>'}</div>
+    </div>`:''}</article>`}
+
+function viewVisite(){const k=today(),by=(a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1;
+  const up=S.visits.filter(v=>v.date>=k).sort(by),past=S.visits.filter(v=>v.date<k).sort(by).reverse();
+  return `<div class="title-row"><h1 class="h1">Visite ed esami</h1><button class="btn btn-primary btn-sm" data-a="visEdit">${ico.plus}Aggiungi</button></div>
+  <h2 class="sec">In programma</h2>${up.map(visCard).join('')||'<p class="empty">Nessun appuntamento in programma.</p>'}
+  <h2 class="sec">Già fatti</h2>${past.map(visCard).join('')||'<p class="empty">Qui trovi gli esami fatti, con la foto del referto.</p>'}`}
+function visCard(v){const d=kd(v.date),t0=kd(today()),days=Math.round((d-t0)/864e5);
+  return `<article class="card vis ${days<0?'past':''}"><div class="vis-date">${v.tbd?`<span class="vd-mon">${fMon.format(d).replace('.','')}</span><span class="vd-mon">${d.getFullYear()}</span>`:`<span class="vd-day">${d.getDate()}</span><span class="vd-mon">${fMon.format(d).replace('.','')}</span>`}</div>
+  <div class="vis-body"><span class="pill ${v.type==='Visita'?'info':'neutral'}">${esc(v.type)}</span><h3 class="h3">${esc(v.title)}</h3>
+    <p class="muted small">${v.tbd?`${cap(fMonY.format(d))} · giorno e ora da fissare`:`${cap(fWd.format(d))} ${fDM.format(d)} alle ${v.time}`}${v.place?' · '+esc(v.place):''}${v.doctor?' · '+esc(v.doctor):''}</p>
+    ${v.notes?`<p class="small">${esc(v.notes)}</p>`:''}
+    ${v.tbd?`<p class="small strong">Quando fissi il giorno, aggiungilo con Modifica: ti avviso il giorno prima.</p>`:days>=0?`<p class="small strong">${days===0?'Oggi':days===1?'Domani':'Tra '+days+' giorni'}${v.remind?' · avviso il giorno prima':''}</p>`:''}
+    ${v.result?`<p class="small"><strong>Esito:</strong> ${esc(v.result)}</p>`:''}
+    ${v.photo?`<img class="ref-img" src="${v.photo}" alt="Foto del referto di ${esc(v.title)}">`:''}
+    <div class="btn-row">${v.type==='Visita'&&days>=0?`<button class="btn btn-ghost btn-sm" data-a="go" data-r="report">${ico.doc}Prepara il report</button>`:''}<button class="btn btn-ghost btn-sm" data-a="visEdit" data-id="${v.id}">${ico.edit}Modifica</button></div></div></article>`}
+
+function viewReport(){const keys=rangeKeys(repDays),s=summary(keys),from=kd(keys[0]),to=kd(keys[keys.length-1]),ins=insights();
+  const symRows=Object.entries(s.sym).map(([n,ks])=>`<tr><td>${esc(n)}</td><td class="num">${ks.length} ${ks.length===1?'volta':'volte'}</td><td>${ks.map(k=>fDM.format(kd(k))).join(', ')}</td></tr>`).join('');
+  return `<div class="title-row" style="justify-content:flex-start"><button class="icon-btn" data-a="go" data-r="storico" aria-label="Torna allo storico">${ico.back}</button><h1 class="h1">Report per il medico</h1></div>
+  <div class="seg" role="tablist"><button role="tab" data-a="repDays" data-v="7" aria-selected="${repDays===7}">Ultimi 7 giorni</button><button role="tab" data-a="repDays" data-v="30" aria-selected="${repDays===30}">Ultimi 30 giorni</button></div>
+  <article class="report">
+    <header class="rep-head"><p class="eyebrow">SaluteRobi · misure fatte a casa</p><h2 class="h2">${esc(S.settings.name||'Paziente')}</h2>
+      <p class="muted small">Dal ${fLong.format(from)} al ${fLong.format(to)} · creato il ${fLong.format(new Date())}</p></header>
+    <section><h3 class="rep-h">Pressione arteriosa</h3><div class="tbl-wrap"><table class="rep-t"><tbody>
+      <tr><td>Media del mattino</td><td class="num"><strong>${R(s.mSys)}/${R(s.mDia)}</strong> mmHg</td></tr>
+      <tr><td>Media della sera</td><td class="num"><strong>${R(s.eSys)}/${R(s.eDia)}</strong> mmHg</td></tr>
+      <tr><td>Valore più alto</td><td class="num">${s.hi?`${s.hi.sys}/${s.hi.dia} · ${fDM.format(new Date(s.hi.t))}`:'–'}</td></tr>
+      <tr><td>Valore più basso</td><td class="num">${s.lo?`${s.lo.sys}/${s.lo.dia} · ${fDM.format(new Date(s.lo.t))}`:'–'}</td></tr>
+      <tr><td>Misurazioni sopra 135/85</td><td class="num">${s.high} su ${s.bp.length}${s.bp.length?` (${Math.round(s.high/s.bp.length*100)}%)`:''}</td></tr></tbody></table></div>
+      ${bpChart(keys)}</section>
+    <section><h3 class="rep-h">Frequenza cardiaca a riposo</h3><p>Media <strong>${R(s.hrAvg)} bpm</strong>, da ${R(s.hrMin)} a ${R(s.hrMax)} · ${s.hr.filter(r=>r.irr==='Sì').length} episodi di battito irregolare segnalati.</p></section>
+    <section><h3 class="rep-h">Peso</h3><p>${s.w.length?`Ultimo valore <strong>${fmt1(s.w[s.w.length-1].kg)} kg</strong> (${fDM.format(new Date(s.w[s.w.length-1].t))})${s.w.length>=2?` · nel periodo da ${fmt1(s.w[0].kg)} a ${fmt1(s.w[s.w.length-1].kg)} kg`:''}`:'Nessuna pesata nel periodo.'}</p></section>
+    <section><h3 class="rep-h">Terapia e aderenza</h3><div class="tbl-wrap"><table class="rep-t"><thead><tr><th>Medicina</th><th>Orari</th><th>Prese</th></tr></thead><tbody>
+      ${S.meds.map(m=>{const c=doseCount(keys,m.id);return `<tr><td><strong>${esc(m.name)}</strong> ${esc(m.dose)}${m.active?`<br><span class="muted small">${esc(m.active)}</span>`:''}</td><td>${m.times.join(', ')}</td><td class="num">${c.taken}/${c.tot} (${c.pct}%)</td></tr>`}).join('')}</tbody></table></div></section>
+    <section><h3 class="rep-h">Benessere riferito</h3><p>Qualità del sonno (voto del paziente): <strong>${fmt1(s.sleepVote)} su 5</strong>, circa ${fmt1(s.sleep)} ore a notte.</p>
+      <p>Attività fisica: <strong>${s.act.length} giorni su ${s.cis.length}</strong> con questionario, ${s.actMin} minuti in tutto${s.act.length?`, soprattutto ${(()=>{const c={};s.act.forEach(x=>(x.activity||[]).forEach(a=>c[a]=(c[a]||0)+1));const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];return top?esc(top[0].toLowerCase()):'attività varie'})()}`:''}.</p>
+      <p>Umore medio ${s.mood?MOODL[Math.round(s.mood)-1].toLowerCase():'–'} · questionario compilato ${s.cis.length} giorni su ${keys.length}.</p>
+      ${symRows?`<div class="tbl-wrap"><table class="rep-t"><thead><tr><th>Disturbo</th><th>Quante</th><th>Quando</th></tr></thead><tbody>${symRows}</tbody></table></div>`:'<p class="muted small">Nessun disturbo segnalato.</p>'}</section>
+    ${ins.length?`<section><h3 class="rep-h">Osservazioni dai dati</h3><ul class="ins small">${ins.map(t=>`<li>${t}</li>`).join('')}</ul></section>`:''}
+    <footer class="rep-foot">Valori registrati dal paziente a casa con il proprio misuratore. Il documento riassume i dati e non contiene diagnosi.</footer></article>
+  <button class="btn btn-primary btn-block" data-a="pdf">${ico.doc}Salva come PDF o stampa</button>
+  <p class="muted small center pdf-note">Si apre la finestra di stampa: scegli «Salva come PDF», poi puoi mandarlo con WhatsApp o email.</p>`}
+
+/* ---------- sheets ---------- */
+function openSheet(html){const w=$('#sheetWrap'),s=$('.sheet'),st=w.hidden?0:s.scrollTop;s.innerHTML=html;w.hidden=false;document.body.classList.add('noscroll');s.scrollTop=st}
+function closeSheet(){$('#sheetWrap').hidden=true;sheetR=null;document.body.classList.remove('noscroll')}
+
+function openCheckin(){const k=today();ci=S.checkins[k]?JSON.parse(JSON.stringify(S.checkins[k])):{mood:null,energy:null,sleepH:7,sleepVote:null,meals:[],water:4,active:null,activity:[],actMin:30,symptoms:[],note:''};ciStep=0;sheetR=renderCi;renderCi()}
+function renderCi(){const N=7;let b='';
+  if(ciStep===0)b=`<h2 class="sheet-title">Come ti senti oggi?</h2><div class="opts">${MOODS.map((m,i)=>`<button class="opt" data-a="ciPick" data-k="mood" data-v="${i+1}" aria-pressed="${ci.mood===i+1}"><span class="emo-xl">${m}</span>${MOODL[i]}</button>`).join('')}</div>`;
+  if(ciStep===1)b=`<h2 class="sheet-title">Quanta energia hai?</h2><div class="opts">${ENERGY.map((e,i)=>`<button class="opt" data-a="ciPick" data-k="energy" data-v="${i}" aria-pressed="${ci.energy===i}"><span class="emo-xl">${['🪫','😮‍💨','🙂','💪'][i]}</span>${e}</button>`).join('')}</div>`;
+  if(ciStep===2)b=`<h2 class="sheet-title">Come hai dormito stanotte?</h2>
+    <div class="vote" role="group" aria-label="Voto al sonno da 1 a 5">${[1,2,3,4,5].map(n=>`<button class="vote-btn" data-a="ciVote" data-v="${n}" aria-pressed="${ci.sleepVote===n}" aria-label="${n}, ${SLEEPL[n-1]}">${n}</button>`).join('')}</div>
+    <div class="vote-ends"><span>1 = male</span><span>5 = benissimo</span></div>
+    ${ci.sleepVote?`<p class="vote-pick">${ci.sleepVote} · ${SLEEPL[ci.sleepVote-1]}</p>`:''}
+    <div class="steppers">${stepper('sleepH','Più o meno quante ore?','ore',ci.sleepH,'facoltativo')}</div>`;
+  if(ciStep===3)b=`<h2 class="sheet-title">Hai mangiato?</h2><fieldset><legend>Tocca i pasti già fatti</legend>${chips('ci','meals',MEALS,true)}</fieldset><div class="steppers">${stepper('water','Bicchieri d\'acqua','',ci.water,'fino ad ora')}</div>`;
+  if(ciStep===4)b=`<h2 class="sheet-title">Oggi ti sei mosso un po'?</h2><p class="muted">Per esempio una camminata, un po' di ginnastica, la bici.</p>
+    <div class="yn"><button class="opt" data-a="ciYN" data-v="Sì" aria-pressed="${ci.active==='Sì'}"><span class="emo-xl">🚶</span>Sì</button><button class="opt" data-a="ciYN" data-v="No" aria-pressed="${ci.active==='No'}"><span class="emo-xl">🛋️</span>No</button></div>
+    ${ci.active==='Sì'?`<fieldset><legend>Cosa hai fatto?</legend>${chips('ci','activity',ACTS,true)}</fieldset><div class="steppers">${stepper('actMin','Per quanto tempo?','min',ci.actMin,'in minuti, più o meno')}</div>`:''}
+    ${ci.active==='No'?`<p class="muted">Va bene così! Domani magari una passeggiatina 😉</p>`:''}`;
+  if(ciStep===5){const danger=ci.symptoms.includes('Dolore al petto')||ci.symptoms.includes('Fiato corto');
+    b=`<h2 class="sheet-title">Hai qualche disturbo?</h2>${chips('ci','symptoms',SYMS,true)}${danger?`<div class="alert">${ico.alert}<span>Se il dolore al petto o il fiato corto sono forti o non passano, chiama subito il 112.</span></div>`:''}`}
+  if(ciStep===6)b=`<h2 class="sheet-title">Vuoi aggiungere qualcosa?</h2><label class="field"><span>Una nota per te o per il medico (facoltativa)</span><textarea id="ci-note" placeholder="Es. oggi un po' di mal di testa dopo pranzo">${esc(ci.note)}</textarea></label>
+    <p class="muted small">${ci.mood?MOODS[ci.mood-1]+' '+MOODL[ci.mood-1]:'Umore non indicato'} · ${ci.energy!=null?ENERGY[ci.energy]:'energia non indicata'} · sonno ${ci.sleepVote||'–'}/5 · ${ci.active==='Sì'?'movimento ✓':ci.active==='No'?'niente movimento':'movimento non indicato'}</p>`;
+  openSheet(`<div class="ci-top"><span class="muted small strong">Domanda ${ciStep+1} di ${N}</span><button class="icon-btn" data-a="closeSheet" aria-label="Chiudi">${ico.x}</button></div>
+    <div class="prog"><span style="width:${(ciStep+1)/N*100}%"></span></div>${b}
+    <div class="btn-row ci-nav">${ciStep>0?`<button class="btn btn-ghost" data-a="ciPrev">Indietro</button>`:''}${ciStep<N-1?`<button class="btn btn-primary" data-a="ciNext">${ciStep<2&&((ciStep===0&&!ci.mood)||(ciStep===1&&ci.energy==null))?'Salta':'Avanti'}</button>`:`<button class="btn btn-primary" data-a="ciSave">${ico.check}Salva</button>`}</div>`)}
+
+function openMed(id){const m=S.meds.find(x=>x.id===id);medD=m?JSON.parse(JSON.stringify(m)):{id:null,name:'',dose:'',times:['08:00'],note:'',stock:30,form:'compressa'};delArm=false;sheetR=renderMed;renderMed()}
+function renderMed(){openSheet(`<div class="ci-top"><h2 class="sheet-title">${medD.id?'Modifica medicina':'Nuova medicina'}</h2><button class="icon-btn" data-a="closeSheet" aria-label="Chiudi">${ico.x}</button></div>
+  <label class="field"><span>Nome</span><input id="m-name" data-m="name" value="${esc(medD.name)}" placeholder="Es. Tachipirina" autocomplete="off"></label>
+  <label class="field"><span>Dose</span><input id="m-dose" data-m="dose" value="${esc(medD.dose)}" placeholder="Es. 500 mg"></label>
+  <label class="field"><span>Principio attivo (facoltativo)</span><input id="m-active" data-m="active" value="${esc(medD.active||'')}" placeholder="Es. paracetamolo"></label>
+  <p class="muted small">Utile se in farmacia danno il generico, che ha un altro nome ma lo stesso principio attivo.</p>
+  <div class="field"><span>A che ora</span><div class="times-edit">${medD.times.map((t,i)=>`<div class="te"><input type="time" id="m-t${i}" data-mt="${i}" value="${t}" aria-label="Orario ${i+1}"><button class="icon-btn" data-a="medTimeDel" data-i="${i}" aria-label="Togli questo orario" ${medD.times.length<2?'disabled':''}>${ico.x}</button></div>`).join('')}
+    <button class="btn btn-ghost btn-sm" data-a="medTimeAdd">${ico.plus}Aggiungi un orario</button></div></div>
+  <label class="field"><span>Come prenderla</span><input id="m-note" data-m="note" list="m-notes" value="${esc(medD.note)}" placeholder="Es. Dopo pranzo">
+    <datalist id="m-notes"><option value="Prima di colazione"><option value="Dopo colazione"><option value="Dopo pranzo"><option value="Dopo cena"><option value="Prima di dormire"><option value="A stomaco vuoto"></datalist></label>
+  <label class="field"><span>Quante compresse ci sono in casa</span><input type="number" inputmode="numeric" id="m-stock" data-m="stock" value="${medD.stock}"></label>
+  <label class="field"><span>Compresse per confezione</span><input type="number" inputmode="numeric" id="m-pack" data-m="pack" value="${medD.pack||''}" placeholder="Es. 28"></label>
+  <p class="err" id="m-err" hidden></p>
+  <div class="btn-row"><button class="btn btn-primary" data-a="medSave">${ico.check}Salva</button><button class="btn btn-ghost" data-a="closeSheet">Annulla</button></div>
+  ${medD.id?`<button class="btn btn-danger-ghost btn-block" data-a="medDel">${delArm?'Tocca di nuovo per eliminarla':'Elimina questa medicina'}</button>`:''}`)}
+
+function openVis(id){const v=S.visits.find(x=>x.id===id);visD=v?JSON.parse(JSON.stringify(v)):{id:null,type:'Visita',title:'',date:dkey(addDays(new Date(),7)),time:'09:00',place:'',doctor:'',notes:'',result:'',remind:true,photo:null};delArm=false;sheetR=renderVis;renderVis()}
+function renderVis(){const f=(k,l,ph,type)=>`<label class="field"><span>${l}</span><input id="v-${k}" data-vf="${k}" ${type?`type="${type}"`:''} value="${esc(visD[k])}" placeholder="${ph||''}"></label>`;
+  openSheet(`<div class="ci-top"><h2 class="sheet-title">${visD.id?'Modifica':'Nuovo appuntamento'}</h2><button class="icon-btn" data-a="closeSheet" aria-label="Chiudi">${ico.x}</button></div>
+  <fieldset><legend>Che cosa è</legend>${chips('vis','type',['Visita','Esame'])}</fieldset>
+  ${f('title','Titolo',visD.type==='Visita'?'Es. Visita cardiologica':'Es. Esami del sangue')}
+  <div class="seg-row">${f('date','Giorno','','date')}${f('time','Ora','','time')}</div>
+  <label class="check"><input type="checkbox" id="v-tbd" ${visD.tbd?'checked':''}>So solo il mese, il giorno è ancora da fissare</label>
+  ${f('place','Dove','Es. Ospedale, ambulatorio 3')}${visD.type==='Visita'?f('doctor','Medico','Es. Dott. Bianchi'):''}
+  <label class="field"><span>Note</span><textarea id="v-notes" data-vf="notes" placeholder="Es. a digiuno, portare le analisi">${esc(visD.notes)}</textarea></label>
+  <label class="check"><input type="checkbox" id="v-remind" ${visD.remind?'checked':''}>Avvisami il giorno prima</label>
+  ${f('result','Esito (dopo la visita)','Es. Nella norma')}
+  <div class="field"><span>Foto del referto</span>${visD.photo?`<img class="ref-img" src="${visD.photo}" alt="Foto del referto"><button class="btn btn-ghost btn-sm" data-a="visPhotoDel">Togli la foto</button>`:''}
+    <label class="btn btn-ghost btn-block">${ico.camera}${visD.photo?'Cambia foto':'Fotografa il referto'}<input type="file" accept="image/*" capture="environment" id="v-photo" hidden></label></div>
+  <p class="err" id="v-err" hidden></p>
+  <div class="btn-row"><button class="btn btn-primary" data-a="visSave">${ico.check}Salva</button><button class="btn btn-ghost" data-a="closeSheet">Annulla</button></div>
+  ${visD.id?`<button class="btn btn-danger-ghost btn-block" data-a="visDel">${delArm?'Tocca di nuovo per eliminarlo':'Elimina appuntamento'}</button>`:''}`)}
+
+function renderSettings(){openSheet(`<div class="ci-top"><h2 class="sheet-title">Impostazioni</h2><button class="icon-btn" data-a="closeSheet" aria-label="Chiudi">${ico.x}</button></div>
+  <label class="field"><span>Nome di chi usa l'app</span><input id="s-name" data-set="name" value="${esc(S.settings.name)}"></label>
+  <div class="seg-row"><label class="field" style="flex:2"><span>Città per il meteo</span><input id="s-city" data-set="city" value="${esc(S.settings.city)}"></label>
+  <label class="field" style="flex:1"><span>CAP</span><input id="s-cap" data-set="cap" inputmode="numeric" value="${esc(S.settings.cap||'')}"></label></div>
+  <label class="check"><input type="checkbox" id="s-big" ${S.settings.big?'checked':''}>Caratteri più grandi</label>
+  <h3 class="h3">Copia di sicurezza</h3>
+  <p class="muted small">I dati restano solo su questo telefono. Ogni tanto salvane una copia (per esempio su WhatsApp o Google Drive): se cambi telefono, la ricarichi da qui.</p>
+  <button class="btn btn-ghost btn-block" data-a="exportData">${ico.doc}Salva una copia dei dati</button>
+  <label class="btn btn-ghost btn-block">${ico.doc}Carica i dati da un file<input type="file" accept="application/json,.json" id="imp-file" hidden></label>
+  <p class="muted small">Caricare un file sostituisce i dati che ci sono adesso. L'app registra i valori e non sostituisce il parere del medico.</p>
+  <button class="btn btn-danger-ghost btn-block" data-a="wipe">${delArm?'Tocca di nuovo per cancellare tutto':S.demo?'Togli i dati di esempio':'Cancella tutti i dati'}</button>`)}
+
+/* ---------- notification, toast, image ---------- */
+let nT,tT;
+function showNotif(g){const n=$('#notif');n.innerHTML=`<div class="n-card" role="alert"><div class="n-head"><span class="n-ic">${ico.heart}</span>SaluteRobi<span class="muted">· adesso</span></div>
+  <p class="n-title">${S.settings.name?esc(S.settings.name)+', è':'È'} ora delle medicine delle ${g.t} 💊</p><p class="n-body">${g.items.map(i=>`${esc(i.m.name)} ${esc(i.m.dose)}`).join(' · ')}${g.items[0].m.note?' · '+esc(g.items[0].m.note).toLowerCase():''}</p>
+  <div class="n-act"><button data-a="nAct" data-t="${g.t}" data-s="taken">Preso</button><button data-a="nAct" data-t="${g.t}" data-s="snooze">Rimanda 10 min</button><button data-a="nAct" data-t="${g.t}" data-s="skipped">Saltato</button></div></div>`;
+  n.hidden=false;clearTimeout(nT);nT=setTimeout(()=>n.hidden=true,15000)}
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tT);tT=setTimeout(()=>t.hidden=true,3200)}
+function readImg(file,max){return new Promise((res,rej)=>{const fr=new FileReader();fr.onerror=rej;fr.onload=()=>{const im=new Image();im.onerror=rej;
+  im.onload=()=>{const sc=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.72))};im.src=fr.result};fr.readAsDataURL(file)})}
+
+/* ---------- actions ---------- */
+function markGroup(t,st){const k=today();groupsFor(k).find(g=>g.t===t).items.forEach(i=>{if(st==='taken'||!i.st)setDose(k,i.key,st)});save()}
+const A={
+  go(el){route=el.dataset.r;if(el.dataset.t)misTab=el.dataset.t;lastRes=null;if(location.hash!=='#'+route){try{location.hash=route}catch(e){}}render();window.scrollTo(0,0)},
+  mistab(el){misTab=el.dataset.v;lastRes=null;render()},
+  repDays(el){repDays=+el.dataset.v;render()},
+  day(el){openDay=openDay===el.dataset.k?null:el.dataset.k;render()},
+  dose(el){setDose(el.dataset.k,el.dataset.key,el.dataset.s||null);save();render()},
+  group(el){markGroup(el.dataset.t,el.dataset.s);render();toast(el.dataset.s==='taken'?'Ottimo, segnate come prese! 👍':'Segnate come non prese')},
+  notifDemo(){const gs=groupsFor(today());const g=gs.find(x=>x.items.some(i=>!i.st))||gs[0];if(!g){toast('Aggiungi prima una medicina');return}window.scrollTo(0,0);showNotif(g)},
+  nAct(el){$('#notif').hidden=true;const s=el.dataset.s;if(s==='snooze'){const d=new Date(Date.now()+6e5);toast(`Ok, te lo ricordo alle ${hm(d)} ⏰`);return}
+    markGroup(el.dataset.t,s);render();toast(s==='taken'?'Ottimo, segnate come prese! 👍':'Segnate come saltate')},
+  step(el){const f=el.dataset.f,d=DRAFT(f),inc=f==='sleepH'?0.5:f==='actMin'?5:f==='kg'?0.1:1,[lo,hi]=LIM[f];d[f]=Math.round(Math.max(lo,Math.min(hi,(+d[f]||0)+inc*(+el.dataset.d)))*10)/10;const i=document.getElementById('f-'+f);if(i)i.value=d[f]},
+  chip(el){const o=OBJ[el.dataset.o](),k=el.dataset.k,v=el.dataset.v;
+    if(el.dataset.multi){let a=o[k]||[];if(a.includes(v))a=a.filter(x=>x!==v);else{a=[...a,v];if(k==='symptoms')a=v==='Nessuno'?['Nessuno']:a.filter(x=>x!=='Nessuno')}o[k]=a}else o[k]=v;
+    if(el.closest('.sheet')&&sheetR)sheetR();else render()},
+  saveBp(){const d=bpD;let sys=+d.sys,dia=+d.dia,pulse=+d.pulse;
+    if(d.two){sys=Math.round((sys+ +d.sys2)/2);dia=Math.round((dia+ +d.dia2)/2);pulse=Math.round((pulse+ +d.pulse2)/2)}
+    if(!(sys>=60&&sys<=260&&dia>=30&&dia<=160&&sys>dia)){toast('Controlla i numeri: la massima deve essere più alta della minima.');return}
+    const now=new Date(),r={id:uid(),t:now.toISOString(),sys,dia,pulse,arm:d.arm,pos:d.pos,ctx:d.ctx,irr:d.irr,temp:(weather(today())||{}).temp??null,two:!!d.two};
+    S.bp.push(r);sortAll();save();lastRes={type:'bp',r};bpD=newBp();ocr=null;render();toast('Fatto, misurazione salvata!');focusResult()},
+  saveHr(){const b=+hrD.bpm;if(!(b>=30&&b<=220)){toast('Controlla il numero dei battiti.');return}
+    const r={id:uid(),t:new Date().toISOString(),bpm:b,ctx:hrD.ctx,irr:hrD.irr,temp:(weather(today())||{}).temp??null};S.hr.push(r);sortAll();save();lastRes={type:'hr',r};hrD=newHr();render();toast('Fatto, battiti salvati!');focusResult()},
+  saveW(){const kg=Math.round(+wD.kg*10)/10;if(!(kg>=30&&kg<=250)){toast('Controlla il peso.');return}
+    const r={id:uid(),t:new Date().toISOString(),kg};S.weight=S.weight||[];S.weight.push(r);sortAll();save();lastRes={type:'w',r};render();toast('Fatto, peso salvato!');focusResult()},
+  checkin(){openCheckin()},
+  ciPick(el){ci[el.dataset.k]=+el.dataset.v;ciStep++;renderCi()},
+  ciVote(el){ci.sleepVote=+el.dataset.v;renderCi()},
+  ciYN(el){ci.active=el.dataset.v;if(ci.active==='No')ci.activity=[];renderCi()},
+  ciNext(){ciStep++;renderCi()}, ciPrev(){ciStep--;renderCi()},
+  ciSave(){S.checkins[today()]=ci;save();closeSheet();render();toast(`Grazie${S.settings.name?' '+S.settings.name:''}, tutto salvato!`)},
+  closeSheet(){closeSheet()},
+  medEdit(el){openMed(el.dataset.id)},
+  medTimeAdd(){medD.times.push('12:00');renderMed()},
+  medTimeDel(el){medD.times.splice(+el.dataset.i,1);renderMed()},
+  medSave(){const e=$('#m-err');medD.times=[...new Set(medD.times.filter(Boolean))].sort();
+    if(!medD.name.trim()){e.textContent='Scrivi il nome della medicina.';e.hidden=false;return}
+    if(!medD.times.length){e.textContent='Aggiungi almeno un orario.';e.hidden=false;return}
+    medD.stock=Math.max(0,+medD.stock||0);medD.pack=+medD.pack||null;
+    if(medD.id){const i=S.meds.findIndex(x=>x.id===medD.id);S.meds[i]=medD}else{medD.id=uid();S.meds.push(medD)}
+    save();closeSheet();render();toast('Medicina salvata')},
+  medDel(){if(!delArm){delArm=true;renderMed();return}S.meds=S.meds.filter(x=>x.id!==medD.id);save();closeSheet();render();toast('Medicina eliminata')},
+  visEdit(el){openVis(el.dataset.id)},
+  visPhotoDel(){visD.photo=null;renderVis()},
+  visSave(){const e=$('#v-err');if(!visD.title.trim()||!visD.date){e.textContent='Scrivi il titolo e il giorno.';e.hidden=false;return}
+    if(visD.id){const i=S.visits.findIndex(x=>x.id===visD.id);S.visits[i]=visD}else{visD.id=uid();S.visits.push(visD)}
+    save();closeSheet();render();toast('Appuntamento salvato')},
+  visDel(){if(!delArm){delArm=true;renderVis();return}S.visits=S.visits.filter(x=>x.id!==visD.id);save();closeSheet();render();toast('Appuntamento eliminato')},
+  pdf(){try{window.print()}catch(e){toast('Questo telefono non riesce a creare il PDF da qui.')}},
+  async exportData(){const name=`saluterobi-${today()}.json`,txt=JSON.stringify(S);
+    try{const f=new File([txt],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Copia dati SaluteRobi'});return}}
+    catch(e){if(e&&e.name==='AbortError')return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Copia salvata nei download')},
+  bigText(){S.settings.big=!S.settings.big;save();applySettings();toast(S.settings.big?'Caratteri più grandi':'Caratteri normali')},
+  settings(){delArm=false;sheetR=renderSettings;renderSettings()},
+  resetDemo(){S=makeDemo();save();bpD=newBp();hrD=newHr();lastRes=null;applySettings();closeSheet();render();toast('Dati di esempio ricaricati')},
+  wipe(){if(!delArm){delArm=true;renderSettings();return}S=Object.assign(emptyState(),{settings:S.demo?emptyState().settings:S.settings});
+    save();bpD=newBp();hrD=newHr();lastRes=null;closeSheet();render();toast('Tutti i dati sono stati cancellati')}
+};
+function focusResult(){const r=document.getElementById('result');if(r){r.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});r.focus({preventScroll:true})}}
+
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const f=A[el.dataset.a];if(f){e.preventDefault();f(el,e)}});
+document.addEventListener('input',e=>{const t=e.target,ds=t.dataset;
+  if(ds.f){DRAFT(ds.f)[ds.f]=t.value===''?'':+t.value}
+  else if(ds.m){medD[ds.m]=t.value}
+  else if(ds.mt!=null){medD.times[+ds.mt]=t.value}
+  else if(ds.vf){visD[ds.vf]=t.value}
+  else if(ds.set){S.settings[ds.set]=t.value;S.demo=S.demo;save();render()}
+  else if(t.id==='ci-note'){ci.note=t.value}});
+document.addEventListener('change',async e=>{const t=e.target;
+  if(t.id==='two'){bpD.two=t.checked;render()}
+  if(t.id==='v-remind'){visD.remind=t.checked}
+  if(t.id==='v-tbd'){visD.tbd=t.checked}
+  if(t.id==='s-big'){S.settings.big=t.checked;save();applySettings()}
+  if(t.id==='s-city'){geocode(t.value)}
+  if(t.id==='imp-file'&&t.files[0]){try{importData(JSON.parse(await t.files[0].text()));closeSheet();bpD=newBp();hrD=newHr();applySettings();render();toast('Dati caricati 👍');fetchWeather()}
+    catch(err){toast('Questo file non è una copia di SaluteRobi.')}}
+  if(t.id==='ocr'&&t.files[0]){let img=null;try{img=await readImg(t.files[0],400)}catch(err){}
+    ocr={state:'reading',img};render();
+    setTimeout(()=>{const r=Math.random;bpD.sys=Math.round(124+r()*16);bpD.dia=Math.round(76+r()*10);bpD.pulse=Math.round(64+r()*12);ocr.state='done';if(route==='misure')render()},1400)}
+  if(t.id==='v-photo'&&t.files[0]){try{visD.photo=await readImg(t.files[0],900);renderVis()}catch(err){toast('Non riesco ad aprire questa foto. Prova con un\'altra.')}}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheetWrap').hidden)closeSheet()});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(ROUTES.includes(h)&&h!==route){route=h;lastRes=null;render();window.scrollTo(0,0)}});
+
+function applySettings(){document.documentElement.style.setProperty('--fs',S.settings.big?'21px':'18px');$('#bigBtn').setAttribute('aria-pressed',!!S.settings.big)}
+const TABS=[['oggi','Oggi','home'],['farmaci','Medicine','pill'],['misure','Misure','pulse'],['storico','Storico','chart'],['visite','Visite','cal']];
+function render(){
+  $('#view').innerHTML=({oggi:viewOggi,farmaci:viewFarmaci,misure:viewMisure,storico:viewStorico,visite:viewVisite,report:viewReport})[route]();
+  const cur=route==='report'?'storico':route;
+  $('#tabs').innerHTML=TABS.map(([r,l,i])=>`<button class="tab" data-a="go" data-r="${r}" ${cur===r?'aria-current="page"':''}><span class="ti">${ico[i]}</span>${l}</button>`).join('');
+  $('#demoChip').hidden=!S.demo;
+}
+$('#brandMark').innerHTML=ico.heart;$('#setBtn').innerHTML=ico.gear;
+applySettings();render();fetchWeather();setInterval(fetchWeather,18e5);
+
+/* Show the reminder once on open, the way the phone would when a dose is due. */
+setTimeout(()=>{const g=groupsFor(today()).find(x=>{const st=groupState(x,true);return st==='late'||st==='now'});if(g&&$('#sheetWrap').hidden)showNotif(g)},2200);
+})();
+</script>
+<script>if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body>
+</html>
