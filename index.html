@@ -594,6 +594,7 @@ function viewOggi(){
   ${!S.meds.length&&!S.demo?welcomeCard():nextHTML}
   ${bpTodayCard()}
   ${actCard()}
+  ${backupCard()}
   <section class="quick" aria-label="Aggiungi una misura">
     <button class="q" data-a="go" data-r="misure" data-t="pressione">${ico.gauge}<span>Pressione</span></button>
     <button class="q" data-a="go" data-r="misure" data-t="peso">${ico.scale}<span>Peso</span></button>
@@ -627,8 +628,13 @@ function actBpCard(keys){const c=actBp(keys),ok=c.yes.n>=2&&c.no.n>=2,d=ok?Math.
   const k=(lab,x)=>`<div class="kpi"><span class="kpi-l">${lab}</span><span class="kpi-v">${x.n?`${R(x.s)}/${R(x.di)}`:'–'}</span><span class="kpi-d">${x.n} ${x.n===1?'giorno':'giorni'}</span></div>`;
   return `<section class="card"><h2 class="h3">Movimento e pressione</h2><p class="muted small">Pressione media degli ultimi 30 giorni, divisa tra i giorni in cui ti sei mosso e quelli in cui non ti sei mosso.</p>
     <div class="kpis">${k('🚶 Con movimento',c.yes)}${k('🛋️ Senza movimento',c.no)}</div><p>${msg}</p></section>`}
+function markBackup(){S.lastBackup=new Date().toISOString();save();render()}
+/* The data lives only on this phone: remind once a week to save a copy. */
+function backupCard(){if(S.demo||!S.meds.length)return '';const d=S.lastBackup?Math.floor((Date.now()-new Date(S.lastBackup))/864e5):null;if(d!=null&&d<7)return '';
+  return `<section class="card"><h2 class="h3">💾 Salva una copia dei dati</h2><p class="muted">${d==null?'Non hai ancora salvato nessuna copia.':`L'ultima copia è di ${d} giorni fa.`} I dati sono solo su questo telefono: con una copia a settimana, su WhatsApp o Google Drive, non si perdono.</p>
+    <button class="btn btn-primary btn-block" data-a="exportData">${ico.doc}Salva una copia adesso</button></section>`}
 function welcomeCard(){return `<section class="card"><h2 class="h2">Benvenuto in SaluteRobi 👋</h2>
-  <p>Per iniziare aggiungi le medicine, oppure carica i dati che ti hanno preparato.</p>
+  <p>Per iniziare aggiungi le medicine, oppure carica i dati che ti hanno preparato. Se hai una copia di sicurezza, caricala con «Carica i dati da un file».</p>
   <button class="btn btn-primary btn-block" data-a="medEdit">${ico.plus}Aggiungi una medicina</button>
   <label class="btn btn-ghost btn-block">${ico.doc}Carica i dati da un file<input type="file" accept="application/json,.json" id="imp-file" hidden></label>
   <button class="btn btn-ghost btn-block" data-a="resetDemo">Prova con dati di esempio</button>
@@ -979,9 +985,9 @@ const A={
     if(atts.length)toast('Preparo la copia con gli allegati…');
     for(const a of atts){try{const b=await FILES.get(a.id);if(b)files[a.id]=await blobToDataURL(b)}catch(e){}}
     const txt=JSON.stringify(Object.assign({},S,{files}));
-    try{const f=new File([txt],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Copia dati SaluteRobi'});return}}
+    try{const f=new File([txt],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Copia dati SaluteRobi'});markBackup();return}}
     catch(e){if(e&&e.name==='AbortError')return}
-    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Copia salvata nei download')},
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();markBackup();toast('Copia salvata nei download')},
   bigText(){S.settings.big=!S.settings.big;save();applySettings();toast(S.settings.big?'Caratteri più grandi':'Caratteri normali')},
   settings(){delArm=false;sheetR=renderSettings;renderSettings()},
   resetDemo(){S=makeDemo();save();bpD=newBp();hrD=newHr();lastRes=null;applySettings();closeSheet();render();toast('Dati di esempio ricaricati')},
@@ -1023,6 +1029,8 @@ function render(){
 }
 $('#brandMark').innerHTML=ico.heart;$('#setBtn').innerHTML=ico.gear;
 applySettings();render();fetchWeather();setInterval(fetchWeather,18e5);
+/* Ask Chrome to keep this app's data even when the phone is short on space. */
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 
 /* Show the reminder once on open, the way the phone would when a dose is due. */
 setTimeout(()=>{const g=groupsFor(today()).find(x=>{const st=groupState(x,true);return st==='late'||st==='now'});if(g&&$('#sheetWrap').hidden)showNotif(g)},2200);
